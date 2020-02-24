@@ -1,0 +1,24 @@
+{
+  "name": "npm-gulp-runner",
+  "version": "0.1.0",
+  "description": "Default gulp tasks configurable through a config file.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo Test && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RTO-Websites/Npm-Gulp-Runner.git"
+  },
+  "keywords": [
+    "Gulp",
+    "Config",
+    "rto-websites"
+  ],
+  "author": "RTO-Websites",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/RTO-Websites/Npm-Gulp-Runner/issues"
+  },
+  "homepage": "https://github.com/RTO-Websites/Npm-Gulp-Runner#readme"
+}
