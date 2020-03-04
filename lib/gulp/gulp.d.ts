@@ -34,6 +34,8 @@ declare namespace GulpClient {
          */
         symlink: SymlinkMethod;
 
+        watch: WatchMethod;
+
     }
 
     interface WatchMethod {
