@@ -10,15 +10,13 @@
     }
   },
   "files": [
-    "gulpfile.ts",
-
+    "gulpfile.ts"
   ],
   "include": ["lib/**/*"],
   "exclude": [
     "node_modules"
   ],
   "typeAcquisition": {
-    "enable": true,
-
+    "enable": true
   }
 }
