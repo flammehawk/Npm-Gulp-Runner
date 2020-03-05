@@ -1,22 +1,19 @@
+
 {
   "compilerOptions": {
     "module": "commonjs",
     "target": "es5",
     "sourceMap": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "*": ["/lib/*"]
-    }
+    "baseUrl": "."
   },
   "files": [
-    "gulpfile.ts"
-  ],
-  "include": ["lib/**/*"],
+    "gulpfile.ts",    
+  ],  
   "exclude": [
     "node_modules"
   ],
-  "typeAcquisition": {
+  "typeAcquisition": { 
     "enable": true
   }
 }

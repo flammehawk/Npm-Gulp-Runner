@@ -76,3 +76,7 @@ fabric.properties
 
 # NPM
 node_modules/
+
+#VS CODE
+
+*.code-workspace

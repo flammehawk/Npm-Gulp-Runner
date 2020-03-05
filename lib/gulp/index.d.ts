@@ -67,8 +67,8 @@ declare namespace GulpClient {
     type SymlinkMethod = typeof vfs.symlink;
 
 }
-declare const gulpClient : GulpClient.Gulp
 
-export = gulpClient;
+
+export {GulpClient};
 
 
