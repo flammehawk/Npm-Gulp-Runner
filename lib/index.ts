@@ -1,4 +1,5 @@
-import {Helper } from './helpers';
-import {GulpClient} from  './gulp';
+import { Helper } from './helpers';
+import { GulpClient } from './gulp';
+import { Config } from './config';
 
-export {Helper, GulpClient};
+export { Helper, GulpClient, Config };

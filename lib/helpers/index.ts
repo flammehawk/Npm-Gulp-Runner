@@ -1,3 +1,3 @@
-import {Helper} from './helper';
+import { Helper } from './helper';
 
-export {Helper};
+export { Helper };

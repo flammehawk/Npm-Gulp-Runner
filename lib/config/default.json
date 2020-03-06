@@ -10,7 +10,7 @@
     },
     {
       "Mode": "CiBuild",
-      "Path": "./Cibuild/"
+      "Path": "./CiBuild/"
     }
   ],
   "Types": [
@@ -31,9 +31,7 @@
     },
     {
       "Name": "Assets",
-      "Src": [
-        "Assets"
-      ],
+      "Src": ["Assets"],
       "Dest": "Assets"
     },
     {
@@ -56,19 +54,12 @@
     {
       "Src": "Admin",
       "Dest": "Admin",
-      "Types": [
-        "SCSS",
-        "JS"
-      ]
+      "Types": ["SCSS", "JS"]
     },
     {
       "Src": "Public",
       "Dest": "Public",
-      "Types": [
-        "SCSS",
-        "JS",
-        "Static"
-      ]
+      "Types": ["SCSS", "JS", "Static"]
     }
   ]
 }
