@@ -7,12 +7,12 @@ import { promises } from 'dns';
 export module Helper {
   import Type = Config.Type;
   import Folder = Config.Folder;
-  export function myCallBack(errnoException: ErrnoException, done: (err?: any) => void): void {
+  export function myCallBack(errnoException: ErrnoException): void {
     if (errnoException) {
       console.error(errnoException);
-      done(errnoException.message);
+      errnoException.message;
     } else {
-      done();
+
     }
   }
   export type Json = string | null | { [property: string]: Json } | Json[];

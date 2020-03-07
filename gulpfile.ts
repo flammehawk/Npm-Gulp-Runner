@@ -1,9 +1,9 @@
-import { Config } from './lib/config';
-import { Helper } from './lib';
-import { JS, CSS } from './Tasks';
-import { cwd } from 'process';
+import { Config } from "./lib/config";
+import { Helper } from "./lib";
+import { JS, CSS } from "./Tasks";
+import { cwd } from "process";
 
-import Gulp = require('Gulp');
+import Gulp = require("Gulp");
 
 export module blob {
   import TaskFunction = Gulp.TaskFunction;
@@ -25,18 +25,18 @@ export module blob {
       this.GulpRunnerCalLerCwd = cwd();
     }
 
-    Build(done: (err?: any) => void) {
+    Build() {
       const parallelTasks = [];
+
       if (CSS.Tasks.isNeeded) {
         const Scss = new CSS.Tasks(this._gulp, this.config, this.buildModes);
-        parallelTasks.push(() => Scss.BuildScssAll(done));
+        parallelTasks.push(() => Scss.BuildScssAll());
       }
       if (JS.Tasks.isNeeded) {
         const Js = new JS.Tasks(this._gulp, this.config, this.buildModes);
-        parallelTasks.push(() => Js.BuildJsAll(done));
+        parallelTasks.push(() => Js.BuildJsAll());
       }
-      this._gulp.parallel(...parallelTasks);
-      done();
+      return this._gulp.parallel(...parallelTasks);
     }
   }
 }

@@ -9,6 +9,7 @@ import { Config } from '../lib/config';
 import { Gulp } from 'gulp';
 import autoPrefixer from 'gulp-autoprefixer';
 import { Helper } from '../lib';
+import { promisify } from 'util';
 import through2 = require('through2');
 
 export namespace Css {
@@ -37,19 +38,19 @@ export namespace Css {
       return result !== undefined;
     }
 
-    public BuildScssAll(done: TaskFunction) {
+    public BuildScssAll() {
       let tasks: TaskFunction[];
       tasks = this.config.Folders.map((folder: Folder) => {
-        return this.BuildScss(folder, done);
+        return promisify<never>(()=>this.BuildScss(folder));
       });
-      this._gulp.parallel(...tasks);
-      done(null);
+      return this._gulp.parallel(...tasks);
+
     }
 
-    private BuildScss(folder: Folder, done: TaskFunction) {
+    private BuildScss(folder: Folder) {
       const SCSS = this.config.Types.find(type => type.Name.toLowerCase() === 'scss');
       const CSS = this.config.Types.find(type => type.Name.toLowerCase() === 'css');
-      pipeline(
+      return pipeline(
         [
           this._gulp.src(
             folder.Src.concat(SCSS.Src.toString()),
@@ -58,7 +59,7 @@ export namespace Css {
           sass.sync({ style: 'compressed' }),
           CSS !== undefined
             ? this._gulp.src(
-                folder.Src.concat(CSS.Src.toString()),
+                Helper.creatGlob(CSS, folder),
                 this.buildMode === BuildModes.dev ? { sourcemaps: true } : null
               )
             : through2.obj(),
@@ -68,10 +69,10 @@ export namespace Css {
           this._gulp.dest(folder.Dest + SCSS?.Dest??CSS?.Dest?? 'css/',this.buildMode === BuildModes.dev? {sourcemaps: true}:null)
         ],
         (errnoException: ErrnoException) => {
-          myCallBack(errnoException, done);
+          myCallBack(errnoException);
         }
       );
-      return done;
+
     }
   }
 }
