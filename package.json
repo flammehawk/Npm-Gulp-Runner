@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/RTO-Websites/Npm-Gulp-Runner#readme",
   "dependencies": {
+    "del": "^5.1.0",
     "esm": "^3.2.25",
     "glob-watcher": "^5.0.3",
     "gulp-autoprefixer": "^7.0.1",
@@ -31,7 +32,6 @@
     "gulp-coffee": "^3.0.3",
     "gulp-rename": "^2.0.0",
     "gulp-sass": "^4.0.2",
-    "gulp-sourcemaps": "^2.6.5",
     "gulp-typescript": "^6.0.0-alpha.1",
     "gulp-uglify": "^3.0.2",
     "through2": "^3.0.1",

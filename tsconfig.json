@@ -1,3 +1,4 @@
+//cspell:disable
 {
   "compilerOptions": {
     "module": "commonjs",
@@ -5,9 +6,10 @@
     "sourceMap": true,
     "resolveJsonModule": true,
     "noImplicitAny": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
-  "files": ["gulpfile.ts"],
+  "files": ["index.ts"],
   "exclude": ["node_modules"],
   "typeAcquisition": {
     "enable": true
