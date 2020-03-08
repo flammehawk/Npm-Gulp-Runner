@@ -3,6 +3,10 @@
  *
  *  Generated using Quicktype
  * @see https://app.quicktype.io
+ *
+ *
+ *
+ *
  */
 // To parse this data:
 //
@@ -12,29 +16,57 @@
 //
 // These functions will throw an error if the JSON doesn't
 // match the expected interface, even if the JSON is valid.
-/* tslint:disable */
+// cSpell:disable
+// tslint:disable
+
 export namespace Config {
   export interface Config {
-    Targets: Target[];
-    Types: Type[];
+    Targets: Targets;
+    Types: Types;
     Folders: Folder[];
   }
 
   export interface Folder {
+    FolderName: string;
     Src: string;
     Dest: string;
     Types: string[];
+    Exclude: string[];
   }
 
-  export interface Target {
-    Mode: string;
+  export interface Targets {
+    Dev: Build;
+    Build: Build;
+    Ci: Build;
+  }
+
+  export interface Build {
+    Slug: string;
     Path: string;
   }
 
-  export interface Type {
+  export interface Types {
+    Styles: Scripts;
+    Scripts: Scripts;
+    Static: Static[];
+  }
+
+  export interface Scripts {
+    Sources: Source[];
+    Destination: string;
+  }
+
+  export interface Source {
+    Name: string;
+    Src: string;
+    Exclude: string[];
+  }
+
+  export interface Static {
     Name: string;
     Src: Src;
     Dest: string;
+    Exclude: string[];
   }
 
   export type Src = string[] | string;
@@ -57,7 +89,7 @@ export namespace Config {
 
   function jsonToJSProps(typ: any): any {
     if (typ.jsonToJS === undefined) {
-      const map: any = {};
+      var map: any = {};
       typ.props.forEach((p: any) => (map[p.json] = { key: p.js, typ: p.typ }));
       typ.jsonToJS = map;
     }
@@ -175,9 +207,9 @@ export namespace Config {
     return { props, additional };
   }
 
-  function m(additional: any) {
-    return { props: [], additional };
-  }
+  // function m(additional: any) {
+  //   return { props: [], additional };
+  // }
 
   function r(name: string) {
     return { ref: name };
@@ -186,22 +218,57 @@ export namespace Config {
   const typeMap: any = {
     Config: o(
       [
-        { json: "Targets", js: "Targets", typ: a(r("Target")) },
-        { json: "Types", js: "Types", typ: a(r("Type")) },
+        { json: "Targets", js: "Targets", typ: r("Targets") },
+        { json: "Types", js: "Types", typ: r("Types") },
         { json: "Folders", js: "Folders", typ: a(r("Folder")) }
       ],
       false
     ),
     Folder: o(
-      [{ json: "Src", js: "Src", typ: "" }, { json: "Dest", js: "Dest", typ: "" }, { json: "Types", js: "Types", typ: a("") }],
+      [
+        { json: "FolderName", js: "FolderName", typ: "" },
+        { json: "Src", js: "Src", typ: "" },
+        { json: "Dest", js: "Dest", typ: "" },
+        { json: "Types", js: "Types", typ: a("") },
+        { json: "Exclude", js: "Exclude", typ: a("") }
+      ],
       false
     ),
-    Target: o([{ json: "Mode", js: "Mode", typ: "" }, { json: "Path", js: "Path", typ: "" }], false),
-    Type: o(
+    Targets: o(
+      [
+        { json: "Dev", js: "Dev", typ: r("Build") },
+        { json: "Build", js: "Build", typ: r("Build") },
+        { json: "Ci", js: "Ci", typ: r("Build") }
+      ],
+      false
+    ),
+    Build: o([{ json: "Slug", js: "Slug", typ: "" }, { json: "Path", js: "Path", typ: "" }], false),
+    Types: o(
+      [
+        { json: "Styles", js: "Styles", typ: r("Scripts") },
+        { json: "Scripts", js: "Scripts", typ: r("Scripts") },
+        { json: "Static", js: "Static", typ: a(r("Static")) }
+      ],
+      false
+    ),
+    Scripts: o(
+      [{ json: "Sources", js: "Sources", typ: a(r("Source")) }, { json: "Destination", js: "Destination", typ: "" }],
+      false
+    ),
+    Source: o(
+      [
+        { json: "Name", js: "Name", typ: "" },
+        { json: "Src", js: "Src", typ: "" },
+        { json: "Exclude", js: "Exclude", typ: a("") }
+      ],
+      false
+    ),
+    Static: o(
       [
         { json: "Name", js: "Name", typ: "" },
         { json: "Src", js: "Src", typ: u(a(""), "") },
-        { json: "Dest", js: "Dest", typ: "" }
+        { json: "Dest", js: "Dest", typ: "" },
+        { json: "Exclude", js: "Exclude", typ: a("") }
       ],
       false
     )
