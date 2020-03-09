@@ -17,7 +17,7 @@ export namespace Clean {
 
     /**
      * @name clean
-     * @returns Promise<boolean>
+     * @returns {TaskFunction[]}
      */
     public clean(): TaskFunction[] {
 
@@ -30,8 +30,8 @@ export namespace Clean {
       return tasks;
     }
     /**
-     * @description cleans the complete buildMode Target directory.
-     * @returns Promise<boolean>
+     * @description Cleans the complete buildMode Target directory.
+     * @returns { TaskFunction}
      */
     private cleanAll(cleanPath: string): TaskFunction {
       return (done) => {

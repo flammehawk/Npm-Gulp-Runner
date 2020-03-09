@@ -55,10 +55,17 @@ export namespace Css {
         }
       });
     }
+    /**
+     *
+     * @param {Types} types The types of the config.json file.
+     * @returns {boolean} If the JsTasks are needed.
+     */
     public static isNeeded(config: config): boolean {
       return config?.Types?.Styles?.Sources?.length > 0 ?? false;
     }
-
+    /**
+     * @returns {TaskFunction[]} an array of TaskFunctions to be used with Gulp parallel
+     */
     public BuildScssAll(watch:boolean=false): TaskFunction[] {
             return this.folders.map((folder: Folder) => {
         if (folder.Types.indexOf(scss) !== -1 || folder.Types.indexOf(css) !== -1) {
@@ -140,7 +147,9 @@ export namespace Css {
         done();
       });
     }
-
+    /**
+     * Activates the Watch for changes of the scripts.
+     */
     public watch() {
       const toWatch: string[] = [];
       for (const index in this.ScssGlob) {

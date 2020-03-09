@@ -36,6 +36,9 @@ export namespace Copy {
                 }
             });
         }
+        /**
+        * @returns {TaskFunction} A TaskFunctions to be used with Gulp
+        */
         public copy(): TaskFunction {
             const tasks:TaskFunction[]=[];
             for (const index in this.config.Folders) {
@@ -53,7 +56,7 @@ export namespace Copy {
             }
             return this._gulp.parallel(tasks);
         }
-        public copyIncremental(): TaskFunction {
+        private copyIncremental(): TaskFunction {
             const tasks:TaskFunction[]=[];
             for (const index in this.config.Folders) {
                 if (this.config.Folders.hasOwnProperty(index)) {
@@ -70,6 +73,9 @@ export namespace Copy {
             }
             return this._gulp.parallel(tasks);
         }
+        /**
+        * Activates the Watch for changes of the scripts.
+        */
         public watch(){
             const toWatch: string[] = [];
             for (const index in this.copyGlob) {

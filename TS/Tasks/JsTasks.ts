@@ -67,8 +67,14 @@ export namespace Js {
       });
 
     }
-    public static isNeeded(config: Types) {
-      const result = config.Scripts.Sources.find(value => {
+
+    /**
+     *
+     * @param {Types} types The types of the config.json file.
+     * @returns {boolean} If the JsTasks are needed.
+     */
+    public static isNeeded(types: Types): boolean {
+      const result = types.Scripts.Sources.find(value => {
         return value.Name.toLowerCase() === js ||
           value.Name.toLowerCase() === coffee ||
           value.Name.toLowerCase() === ts
@@ -77,6 +83,10 @@ export namespace Js {
       });
       return result !== undefined;
     }
+
+    /**
+     * @returns {TaskFunction[]} an array of TaskFunctions to be used with Gulp parallel
+     */
     public BuildJsAll(): TaskFunction[] {
       let tasks;
       tasks = this.config.Folders.map(
@@ -136,6 +146,9 @@ export namespace Js {
       );
 
     }
+    /**
+     * Activates the Watch for changes of the scripts.
+     */
     public watch() {
       const toWatch: string[] = [];
       for (const index in this.JsGlob) {
