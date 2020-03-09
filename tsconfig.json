@@ -1,21 +1,16 @@
+//cspell:disable
 {
   "compilerOptions": {
     "module": "commonjs",
     "target": "es5",
     "sourceMap": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "*": ["/lib/*"]
-    }
+    "noImplicitAny": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
-  "files": [
-    "gulpfile.ts"
-  ],
-  "include": ["lib/**/*"],
-  "exclude": [
-    "node_modules"
-  ],
+  "files": ["index.ts"],
+  "exclude": ["node_modules"],
   "typeAcquisition": {
     "enable": true
   }
