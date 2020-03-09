@@ -120,7 +120,7 @@
       ],
       "Exclude": [
         "Public",
-        "admin",
+        "Admin",
         "node_modules"
       ]
     }

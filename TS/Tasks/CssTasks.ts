@@ -4,6 +4,7 @@ import autoPrefixer from 'gulp-autoprefixer';
 import cleanCss from 'gulp-clean-css';
 import rename from 'gulp-rename';
 import sass from 'gulp-sass';
+import dependents from 'gulp-dependents';
 import { pipeline } from 'stream';
 import { Config, creatGlob, Helper } from '../lib';
 
@@ -58,9 +59,12 @@ export namespace Css {
       return config?.Types?.Styles?.Sources?.length > 0 ?? false;
     }
 
-    public BuildScssAll(): TaskFunction[] {
-      return this.folders.map((folder: Folder) => {
+    public BuildScssAll(watch:boolean=false): TaskFunction[] {
+            return this.folders.map((folder: Folder) => {
         if (folder.Types.indexOf(scss) !== -1 || folder.Types.indexOf(css) !== -1) {
+          if(watch){
+            return this.BuildScssIncremental(folder);
+          }
           return this.BuildScss(folder);
         }
       });
@@ -100,6 +104,43 @@ export namespace Css {
       });
     }
 
+    private BuildScssIncremental(folder: Folder):TaskFunction {
+      const ScssGlob = this.ScssGlob.find((value) => value.folder === folder);
+      const CssGlob = this.CssGlob.find((value) => value.folder === folder);
+      return (done) => new Promise<never>(() => {
+        pipeline(
+          [
+            (this.SCSS !== undefined) ?
+              this._gulp.src(
+                ScssGlob.glob,
+                this.buildMode === BuildModes.dev ? { sourcemaps: true, since: this._gulp.lastRun(this.BuildScssIncremental(folder)) } : null
+
+              ) :
+              through2.obj(),
+              (this.SCSS !== undefined) ?
+              dependents():
+              through2.obj()
+            ,
+            sass.sync({ style: 'compressed' }),
+            this.CSS !== undefined
+              ? this._gulp.src(
+                CssGlob.glob,
+                this.buildMode === BuildModes.dev ? { sourcemaps: true, since: this._gulp.lastRun(this.BuildScssIncremental(folder)) } : null
+              )
+              : through2.obj(),
+            autoPrefixer(),
+            rename({ suffix: '.min' }),
+            cleanCss(),
+            this._gulp.dest(this.DestPath, this.buildMode === BuildModes.dev ? { sourcemaps: true } : null)
+          ],
+          (errnoException: ErrnoException) => {
+            done(new Error(errnoException.message));
+          }
+        );
+        done();
+      });
+    }
+
     public watch() {
       const toWatch: string[] = [];
       for (const index in this.ScssGlob) {
@@ -113,7 +154,7 @@ export namespace Css {
 
         }
       }
-      return this._gulp.watch(toWatch, this.BuildScssAll);
+      return this._gulp.watch(toWatch,  this._gulp.parallel(this.BuildScssAll(true)));
     }
   }
 }

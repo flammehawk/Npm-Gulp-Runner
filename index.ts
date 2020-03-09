@@ -60,6 +60,7 @@ export module blob {
         if (JS.Tasks.isNeeded) {
           this.Js.watch();
         }
+        done();
       };
     }
   }
