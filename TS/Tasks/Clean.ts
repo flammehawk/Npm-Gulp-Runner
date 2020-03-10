@@ -5,13 +5,13 @@ import { TaskFunction } from 'gulp';
 
 
 export module Task {
-  import config = Config.Config;
-  import types = Config.Types;
+
+
   import buildModes = Helper.BuildModes;
   export class Clean  {
-    private config: config;
+    private config: Config;
     private buildMode: buildModes;
-    constructor(config: config, buildMode: buildModes) {
+    constructor(config: Config, buildMode: buildModes) {
       this.config = config;
       this.buildMode = buildMode;
     }

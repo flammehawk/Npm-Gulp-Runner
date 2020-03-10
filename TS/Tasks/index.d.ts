@@ -1,4 +1,4 @@
-import { Config, Helper } from '../lib';
+import { Config, Helper, BuildModes } from '../lib';
 import { TaskFunction, Gulp } from 'gulp';
 
 
@@ -17,7 +17,7 @@ declare module Tasks {
          * @param config
          * @param buildMode
          */
-        constructor(config: Config.Config, buildMode: Helper.BuildModes);
+        constructor(config: Config, buildMode: Helper.BuildModes);
 
         /**
          * Cleans clean
@@ -37,7 +37,7 @@ declare module Tasks {
          * @param _config
          * @param _buildMode
          */
-        constructor(_gulp: Gulp, _config: config, _buildMode: BuildModes);
+        constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes);
 
         /**
          *  Copy´s the static files
@@ -63,14 +63,14 @@ declare module Tasks {
          * @param _config
          * @param _buildMode
          */
-        constructor(_gulp: Gulp, _config: config, _buildMode: BuildModes);
+        constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes);
 
         /**
          * Determines whether the Css Tasks are needed.
          * @param config
          * @returns true if needed
          */
-        public static isNeeded(config: config): boolean;
+        public static isNeeded(config: Config): boolean;
 
         /**
          * Builds all Style files
@@ -96,7 +96,7 @@ declare module Tasks {
          * @param _config
          * @param _buildMode
          */
-        constructor(_gulp: Gulp, _config: config, _buildMode: BuildModes);
+        constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes);
 
         /**
          * Determines whether needed is

@@ -1,6 +1,6 @@
 import { Gulp } from 'gulp';
-import { Helper } from '../lib';
-import { Config } from '../lib/config';
+import { Helper, Config,Folder,Types,Source} from '../lib';
+
 import { pipeline } from 'stream';
 import { TaskFunction } from 'gulp';
 import babel from 'gulp-babel';
@@ -16,10 +16,7 @@ import through2 = require('through2');
 import path = require('path');
 
 export module Tasks {
-  import Folder = Config.Folder;
-  import config = Config.Config;
-  import Types = Config.Types;
-  import Source = Config.Source;
+
   import ErrnoException = NodeJS.ErrnoException;
   import myCallBack = Helper.myCallBack;
   import BuildModes = Helper.BuildModes;
@@ -32,7 +29,7 @@ export module Tasks {
   export class Scripts {
 
     private _gulp: Gulp;
-    private config: config;
+    private config: Config;
     private buildMode: BuildModes;
     private JS: Source;
     private Coffee: Source;
@@ -41,7 +38,7 @@ export module Tasks {
     private CoffeeGlob: { folder: Folder, glob: string[] }[];
     private TsGlob: { folder: Folder, glob: string[] }[];
 
-    constructor(_gulp: Gulp, _config: config, _buildMode: BuildModes) {
+    constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
       this.config = _config;
       this._gulp = _gulp;
       this.buildMode = _buildMode;
@@ -123,7 +120,7 @@ export module Tasks {
         done();
       });
     }
-    private buildTS(TS: Config.Source, folder: Folder) {
+    private buildTS(TS: Source, folder: Folder) {
       let tsProject: gts.Project | null;
       tsProject = gts.createProject(//TODO:  Maybe load tsconfig from cwd to have sourcemaps.
         folder.Src + TS.Src.toString() ?? 'tsconfig.json'
@@ -134,7 +131,7 @@ export module Tasks {
         (errnoException: ErrnoException) => myCallBack(errnoException)
       );
     }
-    private buildCoffee(Coffee: Config.Source, folder: Folder) {
+    private buildCoffee(Coffee: Source, folder: Folder) {
       return pipeline(
         [
           this._gulp.src(

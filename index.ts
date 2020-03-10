@@ -1,4 +1,4 @@
-import { Helper, Config } from './TS/lib';
+import { Helper, Config, Convert } from './TS/lib';
 import { Tasks } from './TS/Tasks';
 import { TaskFunction } from 'gulp';
 
@@ -25,7 +25,7 @@ export module NpmGulpRunner {
    * Main Class of the Npm Gulp Runner
    */
   export class GulpRunner {
-    private config: Config.Config;
+    private config: Config;
     private _gulp: GulpType;
     private buildModes: BuildModes;
     private styles: Styles;
@@ -41,7 +41,7 @@ export module NpmGulpRunner {
      */
     constructor(_gulp: GulpType, _configJson: Json, buildModes: BuildModes) {
       this._gulp = _gulp;
-      this.config = Config.Convert.toConfig(_configJson.toString());
+      this.config = Convert.toConfig(_configJson.toString());
       if (Styles.isNeeded(this.config)) {
         this.styles = new Styles(this._gulp, this.config, this.buildModes);
       }

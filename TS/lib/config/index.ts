@@ -19,7 +19,7 @@
 // cSpell:disable
 // tslint:disable
 
-export namespace Config {
+
   export interface Config {
     Targets: Targets;
     Types: Types;
@@ -273,4 +273,3 @@ export namespace Config {
       false
     )
   };
-}

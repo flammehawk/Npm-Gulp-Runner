@@ -1,21 +1,18 @@
-import { Helper, Config, BuildModes, creatGlob } from '../lib';
+import { Helper,Folder,Types,Static, Config, BuildModes, creatGlob } from '../lib';
 import { TaskFunction, Globs, Gulp } from 'gulp';
 import { pipeline } from 'stream';
 import { isArray } from 'util';
 
 export module Task  {
-    import config = Config.Config;
-    import Folder = Config.Folder;
-    import Types = Config.Types;
-    import Static = Config.Static;
+
     import ErrnoException = NodeJS.ErrnoException;
     export class Copy  {
         private _gulp: Gulp;
-        private config: config;
+        private config: Config;
         private buildMode: BuildModes;
         private folders: Folder;
         private copyGlob: { static:Static, glob:string[]}[];
-        constructor(_gulp: Gulp, _config: config, _buildMode: BuildModes) {
+        constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
             this.config = _config;
             this.buildMode = _buildMode;
             this.copyGlob = [];

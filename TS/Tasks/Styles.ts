@@ -6,17 +6,14 @@ import rename from 'gulp-rename';
 import sass from 'gulp-sass';
 import dependents from 'gulp-dependents';
 import { pipeline } from 'stream';
-import { Config, creatGlob, Helper } from '../lib';
+import { Config, Folder,Source, Settings ,creatGlob, Helper } from '../lib';
 
 
 import through2 = require('through2');
 import path = require('path');
 
 export module Tasks {
-  import Folder = Config.Folder;
-  import config = Config.Config;
 
-  import Source = Config.Source;
   import ErrnoException = NodeJS.ErrnoException;
 
   import BuildModes = Helper.BuildModes;
@@ -26,7 +23,7 @@ export module Tasks {
   export class Styles {
     private _gulp: Gulp;
     private buildMode: BuildModes;
-    private styles: Styles;
+    private styles: Settings ;
     private folders: Folder[];
     private SCSS: Source;
     private CSS: Source;
@@ -35,7 +32,7 @@ export module Tasks {
     private DestPath: string;
 
 
-    constructor(_gulp: Gulp, _config: config, _buildMode: BuildModes) {
+    constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
 
       this._gulp = _gulp;
       this.buildMode = _buildMode;
@@ -60,7 +57,7 @@ export module Tasks {
      * @param {Types} types The types of the config.json file.
      * @returns {boolean} If the JsTasks are needed.
      */
-    public static isNeeded(config: config): boolean {
+    public static isNeeded(config: Config): boolean {
       return config?.Types?.Styles?.Sources?.length > 0 ?? false;
     }
     /**
