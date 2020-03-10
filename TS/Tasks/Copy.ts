@@ -36,14 +36,14 @@ export module Task  {
         /**
         * @returns {TaskFunction} A TaskFunctions to be used with Gulp
         */
-        public copy(): TaskFunction {
+        public copy(watch:boolean=false): TaskFunction {
             const tasks:TaskFunction[]=[];
             for (const index in this.config.Folders) {
                 if (this.config.Folders.hasOwnProperty(index)) {
                     this.config.Types.Static.map((_static)=> {
                         return (done: (err?: Error) => void) => {
                             pipeline([
-                                this._gulp.src(this.copyGlob.find((value)=> value.static===_static ).glob),
+                                watch? this.getCleanSrc(_static):this.getCleanIncrementalSrc(_static),
                                 this._gulp.dest(this.config.Folders[index].Dest)
                             ], (errnoException: ErrnoException) => done(new Error(errnoException.message)));
                             done();
@@ -53,23 +53,8 @@ export module Task  {
             }
             return this._gulp.parallel(tasks);
         }
-        private copyIncremental(): TaskFunction {
-            const tasks:TaskFunction[]=[];
-            for (const index in this.config.Folders) {
-                if (this.config.Folders.hasOwnProperty(index)) {
-                    this.config.Types.Static.map((_static)=> {
-                        return (done: (err?: Error) => void) => {
-                            pipeline([
-                                this._gulp.src(this.copyGlob.find((value)=> value.static===_static ).glob,{since:this._gulp.lastRun(this.copyIncremental)}),
-                                this._gulp.dest(this.config.Folders[index].Dest)
-                            ], (errnoException: ErrnoException) => done(new Error(errnoException.message)));
-                            done();
-                        };
-                    });
-                }
-            }
-            return this._gulp.parallel(tasks);
-        }
+
+
         /**
         * Activates the Watch for changes of the scripts.
         */
@@ -80,7 +65,14 @@ export module Task  {
                 toWatch.push(...this.copyGlob[index].glob);
               }
             }
-            this._gulp.watch(toWatch, this.copyIncremental);
+            this._gulp.watch(toWatch, this.copy(true));
+        }
+
+        private getCleanSrc(_static: Static){
+            return this._gulp.src(this.copyGlob.find( (value)=> value.static === _static ).glob);
+        }
+        private getCleanIncrementalSrc(_static: Static){
+            return this._gulp.src(this.copyGlob.find( (value)=> value.static === _static ).glob,{since:this._gulp.lastRun(this.copy(true))});
         }
     }
 }
