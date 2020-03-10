@@ -3,7 +3,7 @@
     "no-trailing-whitespace": [true, "always"],
     "prefer-const": [true, { "destructuring": "any" }],
     "semicolon": [true, "always"],
-    "space-before-function-parent": [true, "never"],
+    
     "quotemark": [true, "single"]
   }
 }
