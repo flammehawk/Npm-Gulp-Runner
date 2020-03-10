@@ -1,78 +1,98 @@
-import { Helper,Folder,Types,Static, Config, BuildModes, creatGlob } from '../lib';
+import { Helper, Folder, Types, Static, Config, BuildModes, creatGlob, myTaskFunktion } from '../lib';
 import { TaskFunction, Globs, Gulp } from 'gulp';
 import { pipeline } from 'stream';
 import { isArray } from 'util';
 
-export module Task  {
+export module Task {
 
     import ErrnoException = NodeJS.ErrnoException;
-    export class Copy  {
+
+    export class Copy {
         private _gulp: Gulp;
         private config: Config;
         private buildMode: BuildModes;
-        private folders: Folder;
-        private copyGlob: { static:Static, glob:string[]}[];
+        private folders: Folder[];
+        private types: Types;
+        private copyGlob: { static: Static, glob: string[] }[];
         constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
             this.config = _config;
             this.buildMode = _buildMode;
             this.copyGlob = [];
             this._gulp = _gulp;
+            this.folders = _config.Folders;
+            this.types = _config.Types;
+            this.initCopyGlob();
 
-            _config.Folders.map((folder: Folder) => {
-                if (folder.Types.indexOf('Static') !== -1) {
-                    _config.Types.Static.map((source) => {
-                        if (isArray(source.Src)) {
-                            source.Src.map((value) => creatGlob({ Name: source.Name, Src: value, Exclude: source.Exclude }, folder)
-                                .then((glob: string[]) => this.copyGlob.push({static:source, glob:glob })));
-                        }
-                        else {
-                            creatGlob({ Name: source.Name, Src: source.Src, Exclude: source.Exclude }, folder)
-                                .then((glob: string[]) => this.copyGlob.push({static:source, glob:glob }));
-                        }
-                    });
-                }
-            });
         }
-        /**
-        * @returns {TaskFunction} A TaskFunctions to be used with Gulp
-        */
-        public copy(watch:boolean=false): TaskFunction {
-            const tasks:TaskFunction[]=[];
-            for (const index in this.config.Folders) {
-                if (this.config.Folders.hasOwnProperty(index)) {
-                    this.config.Types.Static.map((_static)=> {
-                        return (done: (err?: Error) => void) => {
-                            pipeline([
-                                watch? this.getCleanSrc(_static):this.getCleanIncrementalSrc(_static),
-                                this._gulp.dest(this.config.Folders[index].Dest)
-                            ], (errnoException: ErrnoException) => done(new Error(errnoException.message)));
-                            done();
-                        };
-                    });
+
+        private initCopyGlob() {
+            this.folders.map(this.folderMapCallback,this);
+        }
+
+
+        private folderMapCallback(folder: Folder) {
+            if (folder.Types.indexOf('Static') !== -1) {
+                this.types.Static.map(this.staticMapCallback(folder),this);
+            }
+        }
+
+        private staticMapCallback(folder: Folder): (value: Static, index: number, array: Static[]) => void {
+            return (source: Static) => {
+                if (isArray(source.Src)) {
+                    source.Src.map((src) => creatGlob({ Name: source.Name, Src: src, Exclude: source.Exclude }, folder)
+                        .then((glob: string[]) => this.copyGlob.push({ static: source, glob: glob })));
                 }
+                else {
+                    creatGlob({ Name: source.Name, Src: source.Src, Exclude: source.Exclude }, folder)
+                        .then((glob: string[]) => this.copyGlob.push({ static: source, glob: glob }));
+                }
+            };
+        }
+
+
+        public watch() {
+            const toWatch: string[] = [];
+            for (const index in this.copyGlob) {
+                if (this.copyGlob.hasOwnProperty(index)) {
+                    toWatch.push(...this.copyGlob[index].glob);
+                }
+            }
+            this._gulp.watch(toWatch, this.copy(true));
+        }
+
+        private getCleanSrc(_static: Static) {
+            return this._gulp.src(this.copyGlob.find((value) => value.static === _static).glob);
+        }
+
+        private getCleanIncrementalSrc(_static: Static) {
+            return this._gulp.src(this.copyGlob.find((value) => value.static === _static).glob, { since: this._gulp.lastRun(this.copy(true)) });
+        }
+
+        public copy(watch: boolean = false): TaskFunction {
+            const tasks: TaskFunction[] = [];
+            for (const index in this.config.Folders) {
+                if (!this.config.Folders.hasOwnProperty(index)) {
+                    continue;
+                }
+                tasks.push(... this.mapStaticTasks(watch, index));
+
             }
             return this._gulp.parallel(tasks);
         }
 
 
-        /**
-        * Activates the Watch for changes of the scripts.
-        */
-        public watch(){
-            const toWatch: string[] = [];
-            for (const index in this.copyGlob) {
-              if (this.copyGlob.hasOwnProperty(index)) {
-                toWatch.push(...this.copyGlob[index].glob);
-              }
-            }
-            this._gulp.watch(toWatch, this.copy(true));
-        }
-
-        private getCleanSrc(_static: Static){
-            return this._gulp.src(this.copyGlob.find( (value)=> value.static === _static ).glob);
-        }
-        private getCleanIncrementalSrc(_static: Static){
-            return this._gulp.src(this.copyGlob.find( (value)=> value.static === _static ).glob,{since:this._gulp.lastRun(this.copy(true))});
+        private mapStaticTasks(watch: boolean, index: string):TaskFunction[] {
+            return this.config.Types.Static.map(
+                (_static) => {
+                    return myTaskFunktion<void>(
+                        new Promise<void>((resolve, reject) => {
+                            pipeline([
+                                watch ? this.getCleanSrc(_static) : this.getCleanIncrementalSrc(_static),
+                                this._gulp.dest(this.config.Folders[index].Dest)
+                            ], (errnoException: ErrnoException) => reject(new Error(errnoException.message)));
+                            resolve();
+                        }));
+                });
         }
     }
 }

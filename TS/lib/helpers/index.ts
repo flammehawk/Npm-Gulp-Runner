@@ -1,4 +1,4 @@
-import { Globs } from 'gulp';
+import { Globs, TaskFunction } from 'gulp';
 import {Folder,Source  } from '../index';
 import ErrnoException = NodeJS.ErrnoException;
 import path = require('path');
@@ -19,6 +19,16 @@ export module Helper {
       errnoException.message;
     }
   }
+
+export function myTaskFunktion<T>(execute:Promise<T>):TaskFunction{
+  return (done)=> {
+    execute.catch(reason=> {
+      console.error(reason.ToString());
+      done(new Error(reason.ToString()));
+    }).finally(()=>done());
+  };
+}
+
   export type Json = string | null | { [property: string]: Json } | Json[];
 
   export enum BuildModes {

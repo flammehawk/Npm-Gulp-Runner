@@ -1,4 +1,4 @@
-import { Config, Helper } from '../lib';
+import { Config, Helper, myTaskFunktion } from '../lib';
 import del from 'del';
 
 import { TaskFunction } from 'gulp';
@@ -21,26 +21,29 @@ export module Task {
      * @returns {TaskFunction[]}
      */
     public clean(): TaskFunction[] {
-
+      if (this.buildMode !== buildModes.dev) {
+        console.log('clean swallowed since we are dev');
+        return [];
+      }
       const tasks: TaskFunction[] = [];
       this.getCleanpaths().then(value => {
-        if (this.buildMode !== buildModes.dev) {
-          tasks.push(...value.map(element => this.cleanAll(element)));
-        }
+          tasks.push(...value.map(this.cleanAll));
       });
       return tasks;
     }
+
     /**
      * @description Cleans the complete buildMode Target directory.
      * @returns { TaskFunction}
      */
     private cleanAll(cleanPath: string): TaskFunction {
-      return (done) => {
-        return new Promise<never>(() => {
-          del(cleanPath).then(value => console.log(value), reason => done(reason));
-        });
-      };
+      return myTaskFunktion<never>(
+        new Promise<never>((reject) => {
+          del(cleanPath).then(value => console.log(value), reason => reject(reason));
+        })
+      );
     }
+
     private getCleanpaths(): Promise<string[]> {
       return new Promise<string[]>((resolve, reject) => {
         const cleanPath: string[] = [];

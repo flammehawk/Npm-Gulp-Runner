@@ -4,5 +4,7 @@ import { Config, Folder, Source, Scripts as Settings, Types, Static, Convert } f
 
 import BuildModes = Helper.BuildModes;
 import creatGlob = Helper.creatGlob;
+import myTaskFunktion = Helper.myTaskFunktion;
 
-export { Helper, BuildModes, creatGlob, GulpClient, Config, Settings, Types, Static, Folder, Source, Convert};
+
+export { Helper, BuildModes, creatGlob, GulpClient, Config, Settings, Types, Static, Folder, Source, Convert, myTaskFunktion};
