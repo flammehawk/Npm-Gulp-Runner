@@ -15,7 +15,7 @@ import through2 = require('through2');
 
 import path = require('path');
 
-export namespace Js {
+export module Tasks {
   import Folder = Config.Folder;
   import config = Config.Config;
   import Types = Config.Types;
@@ -24,11 +24,12 @@ export namespace Js {
   import myCallBack = Helper.myCallBack;
   import BuildModes = Helper.BuildModes;
   import creatGlob = Helper.creatGlob;
+
   declare const js = 'js';
   declare const coffee = 'coffee';
   declare const ts = 'ts';
 
-  export class Tasks {
+  export class Scripts {
 
     private _gulp: Gulp;
     private config: config;

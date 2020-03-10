@@ -1,15 +1,15 @@
-import { Helper, Config, BuildModes, creatGlob } from './../lib';
+import { Helper, Config, BuildModes, creatGlob } from '../lib';
 import { TaskFunction, Globs, Gulp } from 'gulp';
 import { pipeline } from 'stream';
 import { isArray } from 'util';
 
-export namespace Copy {
+export module Task  {
     import config = Config.Config;
     import Folder = Config.Folder;
     import Types = Config.Types;
     import Static = Config.Static;
     import ErrnoException = NodeJS.ErrnoException;
-    export class Task {
+    export class Copy  {
         private _gulp: Gulp;
         private config: config;
         private buildMode: BuildModes;

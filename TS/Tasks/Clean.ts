@@ -1,13 +1,14 @@
-import { Config, Helper } from './../lib';
+import { Config, Helper } from '../lib';
 import del from 'del';
 
 import { TaskFunction } from 'gulp';
 
-export namespace Clean {
+
+export module Task {
   import config = Config.Config;
   import types = Config.Types;
   import buildModes = Helper.BuildModes;
-  export class Task {
+  export class Clean  {
     private config: config;
     private buildMode: buildModes;
     constructor(config: config, buildMode: buildModes) {

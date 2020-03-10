@@ -1,5 +1,5 @@
 import { Helper, Config } from './TS/lib';
-import { JS, CSS, Clean, Copy } from './TS/Tasks';
+import { Tasks } from './TS/Tasks';
 import { TaskFunction } from 'gulp';
 
 
@@ -14,6 +14,10 @@ export module NpmGulpRunner {
 
   import Json = Helper.Json;
   import BuildModes = Helper.BuildModes;
+  import Clean = Tasks.Clean;
+  import Styles = Tasks.Styles;
+  import Scripts = Tasks.Scripts;
+  import Copy = Tasks.Copy;
 
   type GulpType = typeof Gulp;
 
@@ -24,9 +28,10 @@ export module NpmGulpRunner {
     private config: Config.Config;
     private _gulp: GulpType;
     private buildModes: BuildModes;
-    private Scss: CSS.Tasks;
-    private Js: JS.Tasks;
-    private copy: Copy.Task;
+    private styles: Styles;
+    private scripts: Scripts;
+    private copy: Copy;
+    private clean: Clean;
 
     /**
      * @constructor
@@ -37,19 +42,19 @@ export module NpmGulpRunner {
     constructor(_gulp: GulpType, _configJson: Json, buildModes: BuildModes) {
       this._gulp = _gulp;
       this.config = Config.Convert.toConfig(_configJson.toString());
-      if (CSS.Tasks.isNeeded) {
-        this.Scss = new CSS.Tasks(this._gulp, this.config, this.buildModes);
+      if (Styles.isNeeded(this.config)) {
+        this.styles = new Styles(this._gulp, this.config, this.buildModes);
       }
-      if (JS.Tasks.isNeeded) {
-        this.Js = new JS.Tasks(this._gulp, this.config, this.buildModes);
+      if (Scripts.isNeeded(this.config.Types)) {
+        this.scripts = new Scripts(this._gulp, this.config, this.buildModes);
       }
-      this.copy = new Copy.Task(this._gulp, this.config, this.buildModes);
-
+      this.copy = new Copy(this._gulp, this.config, this.buildModes);
+      this.clean = new Clean(this.config, this.buildModes);
     }
 
     private Clean(): TaskFunction {
-      const clean = new Clean.Task(this.config, this.buildModes);
-      return this._gulp.parallel(clean.clean());
+
+      return this._gulp.parallel(this.clean.clean());
     }
     private Copy(): TaskFunction {
       return this._gulp.parallel(this.copy.copy());
@@ -61,11 +66,11 @@ export module NpmGulpRunner {
      */
     public Build(): TaskFunction {
       const parallelTasks = [];
-      if (CSS.Tasks.isNeeded) {
-        parallelTasks.push(...this.Scss.BuildScssAll());
+      if (this.styles) {
+        parallelTasks.push(...this.styles.BuildScssAll());
       }
-      if (JS.Tasks.isNeeded) {
-        parallelTasks.push(...this.Js.BuildJsAll());
+      if (this.scripts) {
+        parallelTasks.push(...this.scripts.BuildJsAll());
       }
       return this._gulp.series(this.Clean(), this._gulp.parallel(...parallelTasks, this.Copy()));
     }
@@ -76,11 +81,11 @@ export module NpmGulpRunner {
      */
     public watch(): TaskFunction {
       return (done) => {
-        if (CSS.Tasks.isNeeded) {
-          this.Scss.watch();
+        if (this.styles) {
+          this.styles.watch();
         }
-        if (JS.Tasks.isNeeded) {
-          this.Js.watch();
+        if (this.scripts) {
+          this.scripts.watch();
         }
         this.copy.watch();
         done();

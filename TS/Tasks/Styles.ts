@@ -12,10 +12,10 @@ import { Config, creatGlob, Helper } from '../lib';
 import through2 = require('through2');
 import path = require('path');
 
-export namespace Css {
+export module Tasks {
   import Folder = Config.Folder;
   import config = Config.Config;
-  import Styles = Config.Scripts;
+
   import Source = Config.Source;
   import ErrnoException = NodeJS.ErrnoException;
 
@@ -23,7 +23,7 @@ export namespace Css {
 
   declare const scss = 'scss';
   declare const css = 'css';
-  export class Tasks {
+  export class Styles {
     private _gulp: Gulp;
     private buildMode: BuildModes;
     private styles: Styles;
