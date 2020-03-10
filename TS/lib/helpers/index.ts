@@ -9,9 +9,12 @@ import path = require('path');
 export module Helper {
 
 
+
   /**
    *
-   * @param {ErrnoException} errnoException The error that get thrown by Pipeline
+   *
+   * @export
+   * @param {ErrnoException} errnoException
    */
   export function myCallBack(errnoException: ErrnoException): void {
     if (errnoException) {
@@ -20,6 +23,14 @@ export module Helper {
     }
   }
 
+/**
+ *
+ *
+ * @export
+ * @template T
+ * @param {Promise<T>} execute
+ * @returns {TaskFunction}
+ */
 export function myTaskFunktion<T>(execute:Promise<T>):TaskFunction{
   return (done)=> {
     execute.catch(reason=> {
@@ -31,11 +42,18 @@ export function myTaskFunktion<T>(execute:Promise<T>):TaskFunction{
 
   export type Json = string | null | { [property: string]: Json } | Json[];
 
+  /**
+   *
+   *
+   * @export
+   * @enum {number}
+   */
   export enum BuildModes {
     dev = 0,
     release,
     ci
   }
+
   /**
    *
    * @param {Source} _Src the Source config that shall be used for the glob

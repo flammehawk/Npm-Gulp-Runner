@@ -20,6 +20,13 @@ export module Tasks {
 
   declare const scss = 'scss';
   declare const css = 'css';
+
+  /**
+   *
+   *
+   * @export
+   * @class Styles
+   */
   export class Styles {
     private _gulp: Gulp;
     private buildMode: BuildModes;
@@ -32,6 +39,13 @@ export module Tasks {
     private DestPath: string;
 
 
+    /**
+     *Creates an instance of Styles.
+     * @param {Gulp} _gulp
+     * @param {Config} _config
+     * @param {BuildModes} _buildMode
+     * @memberof Styles
+     */
     constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
 
       this._gulp = _gulp;
@@ -44,6 +58,13 @@ export module Tasks {
       this.init(_config);
     }
 
+    /**
+     *
+     *
+     * @private
+     * @param {Config} _config
+     * @memberof Styles
+     */
     private init(_config: Config) {
 
       this.folders = [];
@@ -62,10 +83,25 @@ export module Tasks {
       }
     }
 
+    /**
+     *
+     *
+     * @private
+     * @param {Folder} folder
+     * @returns {boolean}
+     * @memberof Styles
+     */
     private filterFolders(folder: Folder): boolean {
       return ((folder.Types.indexOf(scss) !== -1) || (folder.Types.indexOf(css) !== -1));
     }
 
+    /**
+     *
+     *
+     * @private
+     * @param {Folder} folder
+     * @memberof Styles
+     */
     private createStyleGlobs(folder: Folder): void {
       if (this.SCSS) {
         creatGlob(this.SCSS, folder).then((glob) => this.ScssGlobs.push({ folder, glob }));
@@ -75,17 +111,26 @@ export module Tasks {
       }
     }
 
+
     /**
      *
-     * @param {Types} types The types of the config.json file.
-     * @returns {boolean} If the JsTasks are needed.
+     *
+     * @static
+     * @param {Config} config
+     * @returns {boolean}
+     * @memberof Styles
      */
     public static isNeeded(config: Config): boolean {
       return config?.Types?.Styles?.Sources?.length > 0 ?? false;
     }
 
+
     /**
-     * @returns {TaskFunction[]} an array of TaskFunctions to be used with Gulp parallel
+     *
+     *
+     * @param {boolean} [watch=false]
+     * @returns {TaskFunction}
+     * @memberof Styles
      */
     public BuildScssAll(watch: boolean = false): TaskFunction {
 
@@ -93,6 +138,15 @@ export module Tasks {
         this.folders.map((folder)=>this.BuildScss(folder,true),this));
     }
 
+    /**
+     *
+     *
+     * @private
+     * @param {Folder} folder
+     * @param {boolean} [watch=false]
+     * @returns {TaskFunction}
+     * @memberof Styles
+     */
     private BuildScss(folder: Folder, watch: boolean = false): TaskFunction {
 
       const ScssGlob = this.ScssGlobs.find((value) => value.folder === folder).glob;
@@ -118,21 +172,56 @@ export module Tasks {
         }));
     }
 
+    /**
+     *
+     *
+     * @private
+     * @param {string[]} ScssGlob
+     * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
+     * @memberof Styles
+     */
     private getScssGulpSrc(ScssGlob: string[]): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
       return this.SCSS ?
         this._gulp.src(ScssGlob, this.buildMode === BuildModes.dev ? { sourcemaps: true } : null) :
         through2.obj();
     }
+
+    /**
+     *
+     *
+     * @private
+     * @param {string[]} CssGlob
+     * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
+     * @memberof Styles
+     */
     private getCssGulpSrc(CssGlob: string[]): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
       return this.SCSS ?
         this._gulp.src(CssGlob, this.buildMode === BuildModes.dev ? { sourcemaps: true } : null) :
         through2.obj();
     }
+
+    /**
+     *
+     *
+     * @private
+     * @param {string[]} ScssGlob
+     * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
+     * @memberof Styles
+     */
     private getScssGulpSrcIncremental(ScssGlob: string[]): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
       return this.SCSS ?
         this._gulp.src(ScssGlob, this.buildMode === BuildModes.dev ? { sourcemaps: true, since: this._gulp.lastRun(this.BuildScssAll(true)) } : null) :
         through2.obj();
     }
+
+    /**
+     *
+     *
+     * @private
+     * @param {string[]} CssGlob
+     * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
+     * @memberof Styles
+     */
     private getCssGulpSrcIncremental(CssGlob: string[]): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
       return this.SCSS ?
         this._gulp.src(CssGlob, this.buildMode === BuildModes.dev ? { sourcemaps: true, since: this._gulp.lastRun(this.BuildScssAll(true)) } : null) :
@@ -140,8 +229,12 @@ export module Tasks {
     }
 
 
+
     /**
-     * Activates the Watch for changes of the scripts.
+     *
+     *
+     * @returns
+     * @memberof Styles
      */
     public watch() {
 

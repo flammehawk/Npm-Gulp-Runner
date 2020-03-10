@@ -2,9 +2,6 @@ import { Helper, Config, Convert } from './TS/lib';
 import { Tasks } from './TS/Tasks';
 import { TaskFunction } from 'gulp';
 
-
-
-import path = require('path');
 import Gulp = require('Gulp');
 
 /**
@@ -21,8 +18,12 @@ export module NpmGulpRunner {
 
   type GulpType = typeof Gulp;
 
+
   /**
-   * Main Class of the Npm Gulp Runner
+   *
+   *
+   * @export
+   * @class GulpRunner
    */
   export class GulpRunner {
     private config: Config;
@@ -33,11 +34,13 @@ export module NpmGulpRunner {
     private copy: Copy;
     private clean: Clean;
 
+
     /**
-     * @constructor
-     * @param {GulpType} _gulp an instance of Gulp that shall be used by the Runner.
-     * @param {Json} _configJson the Configuration that shall be used.
-     * @param {BuildModes} buildModes an Enum that represents the current BuildMode.
+     *Creates an instance of GulpRunner.
+     * @param {GulpType} _gulp
+     * @param {Json} _configJson
+     * @param {BuildModes} buildModes
+     * @memberof GulpRunner
      */
     constructor(_gulp: GulpType, _configJson: Json, buildModes: BuildModes) {
       this._gulp = _gulp;
@@ -52,17 +55,35 @@ export module NpmGulpRunner {
       this.clean = new Clean(this.config, this.buildModes);
     }
 
+    /**
+     *
+     *
+     * @private
+     * @returns {TaskFunction}
+     * @memberof GulpRunner
+     */
     private Clean(): TaskFunction {
 
       return this._gulp.parallel(this.clean.clean());
     }
+
+    /**
+     *
+     *
+     * @private
+     * @returns {TaskFunction}
+     * @memberof GulpRunner
+     */
     private Copy(): TaskFunction {
       return this._gulp.parallel(this.copy.copy());
     }
+
+
     /**
-     * The Build Functionality that is exposed call to build
-     * executes Clean, build of scripts and styles as well as copy of static files
-     * returns a Valid Gulp Taskfunction
+     *
+     *
+     * @returns {TaskFunction}
+     * @memberof GulpRunner
      */
     public Build(): TaskFunction {
       const parallelTasks = [];
@@ -74,10 +95,12 @@ export module NpmGulpRunner {
       }
       return this._gulp.series(this.Clean(), this._gulp.parallel(...parallelTasks, this.Copy()));
     }
-   /**
-     * The Watch Functionality that is exposed call to build
-     * executes incrementalbuild of scripts and styles as well as copy of static files
-     * returns a Valid Gulp Taskfunction
+
+    /**
+     *
+     *
+     * @returns {TaskFunction}
+     * @memberof GulpRunner
      */
     public watch(): TaskFunction {
       return (done) => {

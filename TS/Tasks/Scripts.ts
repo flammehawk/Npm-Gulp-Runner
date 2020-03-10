@@ -25,6 +25,12 @@ export module Tasks {
   declare const coffee = 'coffee';
   declare const ts = 'ts';
 
+  /**
+   *
+   *
+   * @export
+   * @class Scripts
+   */
   export class Scripts {
 
     private _gulp: Gulp;
@@ -39,6 +45,13 @@ export module Tasks {
 
     private folders: Folder[];
 
+    /**
+     *Creates an instance of Scripts.
+     * @param {Gulp} _gulp
+     * @param {Config} _config
+     * @param {BuildModes} _buildMode
+     * @memberof Scripts
+     */
     constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
 
       this._gulp = _gulp;
@@ -48,6 +61,13 @@ export module Tasks {
 
     }
 
+    /**
+     *
+     *
+     * @private
+     * @param {Config} _config
+     * @memberof Scripts
+     */
     private init(_config: Config) {
 
       this.folders = [];
@@ -75,17 +95,25 @@ export module Tasks {
       }
     }
 
+
     /**
      *
-     * @param {Types} types The types of the config.json file.
-     * @returns {boolean} If the ScriptTasks are needed.
+     *
+     * @static
+     * @param {Types} types
+     * @returns {boolean}
+     * @memberof Scripts
      */
     public static isNeeded(types: Types): boolean {
       return types?.Scripts?.Sources?.length > 0 ?? false;
     }
 
+
     /**
-     * @returns {TaskFunction[]} an array of TaskFunctions to be used with Gulp parallel
+     *
+     *
+     * @returns {TaskFunction[]}
+     * @memberof Scripts
      */
     public BuildJsAll(): TaskFunction[] {
       let tasks: TaskFunction[];
@@ -93,6 +121,15 @@ export module Tasks {
       return tasks;
 
     }
+
+    /**
+     *
+     *
+     * @private
+     * @param {Folder} folder
+     * @returns {TaskFunction}
+     * @memberof Scripts
+     */
     private BuildJS(folder: Folder): TaskFunction {
 
       return myTaskFunktion<void>(
@@ -118,6 +155,14 @@ export module Tasks {
 
     }
 
+    /**
+     *
+     *
+     * @private
+     * @param {Folder} folder
+     * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
+     * @memberof Scripts
+     */
     private getJsGulpSrc(folder: Folder): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
       if (this.JS) {
         return this._gulp.src(this.JsGlob.find(
@@ -128,6 +173,15 @@ export module Tasks {
 
     }
 
+    /**
+     *
+     *
+     * @private
+     * @param {Source} TS
+     * @param {Folder} folder
+     * @returns {NodeJS.WritableStream}
+     * @memberof Scripts
+     */
     private buildTS(TS: Source, folder: Folder): NodeJS.WritableStream {
 
       if (TS) {
@@ -145,6 +199,15 @@ export module Tasks {
       return through2.obj();
     }
 
+    /**
+     *
+     *
+     * @private
+     * @param {Source} Coffee
+     * @param {Folder} folder
+     * @returns {NodeJS.WritableStream}
+     * @memberof Scripts
+     */
     private buildCoffee(Coffee: Source, folder: Folder): NodeJS.WritableStream {
       if (Coffee) {
         return pipeline(
@@ -162,8 +225,12 @@ export module Tasks {
       return through2.obj();
     }
 
+
     /**
-     * Activates the Watch for changes of the scripts.
+     *
+     *
+     * @returns
+     * @memberof Scripts
      */
     public watch() {
 

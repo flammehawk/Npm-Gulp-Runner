@@ -8,6 +8,12 @@ export module Task {
 
 
   import buildModes = Helper.BuildModes;
+  /**
+   *
+   *
+   * @export
+   * @class Clean
+   */
   export class Clean  {
     private config: Config;
     private buildMode: buildModes;
@@ -16,9 +22,12 @@ export module Task {
       this.buildMode = buildMode;
     }
 
+
     /**
-     * @name clean
+     *
+     *
      * @returns {TaskFunction[]}
+     * @memberof Clean
      */
     public clean(): TaskFunction[] {
       if (this.buildMode !== buildModes.dev) {
@@ -32,9 +41,14 @@ export module Task {
       return tasks;
     }
 
+
     /**
-     * @description Cleans the complete buildMode Target directory.
-     * @returns { TaskFunction}
+     *
+     *
+     * @private
+     * @param {string} cleanPath
+     * @returns {TaskFunction}
+     * @memberof Clean
      */
     private cleanAll(cleanPath: string): TaskFunction {
       return myTaskFunktion<never>(
@@ -44,6 +58,13 @@ export module Task {
       );
     }
 
+    /**
+     *
+     *
+     * @private
+     * @returns {Promise<string[]>}
+     * @memberof Clean
+     */
     private getCleanpaths(): Promise<string[]> {
       return new Promise<string[]>((resolve, reject) => {
         const cleanPath: string[] = [];
