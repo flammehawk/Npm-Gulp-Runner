@@ -90,7 +90,7 @@
   },
   "Folders": [
     {
-      "FolderName": "Admin",
+      "Name": "Admin",
       "Src": "Admin",
       "Dest": "Admin",
       "Types": [
@@ -101,7 +101,7 @@
       "Exclude": []
     },
     {
-      "FolderName": "Public",
+      "Name": "Public",
       "Src": "Public",
       "Dest": "Public",
       "Types": [
@@ -112,7 +112,7 @@
       "Exclude": []
     },
     {
-      "FolderName": "Root",
+      "Name": "Root",
       "Src": "",
       "Dest": "",
       "Types": [
