@@ -1,17 +1,19 @@
-//cspell:disable
 {
-  "compilerOptions": {
-    "module": "commonjs",
-    "target": "es5",
-    "sourceMap": true,
-    "resolveJsonModule": true,
-    "noImplicitAny": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true
-  },
-  "files": ["index.ts"],
-  "exclude": ["node_modules"],
-  "typeAcquisition": {
-    "enable": true
-  }
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es5",
+        "sourceMap": true,
+        "resolveJsonModule": true,
+        "noImplicitAny": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "importHelpers": true,
+        "downlevelIteration": true,
+        "outDir": "./dist",
+        "sourceRoot": "./TS"
+    },
+
+    "typeAcquisition": {
+        "enable": true
+    }
 }

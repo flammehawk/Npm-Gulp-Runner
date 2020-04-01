@@ -2,31 +2,41 @@
   "name": "npm-gulp-runner",
   "version": "0.1.0",
   "description": "Default gulp tasks configurable through a config file.",
-  "main": "index.ts",
-  "scripts": {
-    "test": "echo Test && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/RTO-Websites/Npm-Gulp-Runner.git"
-  },
   "keywords": [
     "Gulp",
     "Config",
     "rto-websites"
   ],
-  "author": "RTO-Websites",
-  "license": "GPL-3.0",
+  "homepage": "https://github.com/RTO-Websites/Npm-Gulp-Runner#readme",
   "bugs": {
     "url": "https://github.com/RTO-Websites/Npm-Gulp-Runner/issues"
   },
-  "homepage": "https://github.com/RTO-Websites/Npm-Gulp-Runner#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RTO-Websites/Npm-Gulp-Runner.git"
+  },
+  "license": "GPL-3.0",
+  "author": "RTO-Websites",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo Test && exit 1"
+  },
+  "lint-staged": {
+    "*.ts": "eslint --cache --fix"
+  },
+  "browserslist": [
+    "last 3 version",
+    "safari 5",
+    "ie 8",
+    "ie 9"
+  ],
   "dependencies": {
     "del": "^5.1.0",
     "esm": "^3.2.25",
     "glob-watcher": "^5.0.3",
     "gulp-autoprefixer": "^7.0.1",
     "gulp-babel": "^8.0.0",
+    "gulp-cached": "^1.1.1",
     "gulp-clean": "^0.4.0",
     "gulp-clean-css": "^4.2.0",
     "gulp-coffee": "^3.0.3",
@@ -35,15 +45,16 @@
     "gulp-sass": "^4.0.2",
     "gulp-typescript": "^6.0.0-alpha.1",
     "gulp-uglify": "^3.0.2",
+    "source-map": "^0.7.3",
     "through2": "^3.0.1",
-    "tsconfig-paths": "^3.9.0",
+    "tslib": "^1.11.1",
     "typescript": "^3.8.2"
   },
   "devDependencies": {
     "@babel/core": "^7.8.4",
     "@babel/preset-env": "^7.8.4",
     "@commitlint/cli": "^8.3.5",
-    "@commitlint/config-conventional": "^8.3.4",
+    "@rto-websites/commitlint-config-rto": "^1.0.4",
     "@types/glob": "^7.1.1",
     "@types/glob-watcher": "^5.0.0",
     "@types/gulp": "^4.0.6",
@@ -56,23 +67,21 @@
     "@types/pump": "^1.1.0",
     "@types/through2": "^2.0.34",
     "@types/undertaker": "^1.2.2",
+    "@typescript-eslint/eslint-plugin": "^2.24.0",
+    "@typescript-eslint/parser": "^2.24.0",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.1",
+    "eslint-plugin-eslint-comments": "^3.1.2",
+    "eslint-plugin-jest": "^23.8.2",
+    "eslint-plugin-node": "^11.0.0",
+    "eslint-plugin-prettier": "^3.1.2",
     "gulp": "^4.0.2",
     "husky": "^4.2.3",
-    "ts-node": "^8.6.2",
-    "tslint": "^6.0.0"
+    "lint-staged": "^10.0.8",
+    "prettier": "^2.0.1",
+    "ts-node": "^8.6.2"
   },
   "peerDependencies": {
     "gulp": "^4.0.2"
-  },
-  "browserslist": [
-    "last 3 version",
-    "safari 5",
-    "ie 8",
-    "ie 9"
-  ],
-  "husky": {
-    "hooks": {
-      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-    }
   }
 }
