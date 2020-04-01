@@ -5,39 +5,46 @@ import cleanCss from 'gulp-clean-css';
 import rename from 'gulp-rename';
 import sass from 'gulp-sass';
 import dependents from 'gulp-dependents';
-import { pipeline } from 'stream';
-import { Config, Folder, Source, Settings, creatGlob, Helper, myTaskFunktion, Types } from '../lib';
 
+import { pipeline } from 'stream';
+import {
+    Config,
+    Folder,
+    Source,
+    creatGlob,
+    BuildModes,
+    myTaskFunktion,
+    KeyedGlob,
+    createKeyedGlob,
+    getGlobFromKeyValuePair,
+    getDestination,
+    MappedFolder,
+    findSource,
+} from '../lib';
 
 import through2 = require('through2');
-import path = require('path');
 
-export module Tasks {
+import ErrnoException = NodeJS.ErrnoException;
+import { FSWatcher } from 'fs';
+import { Targets, Build } from '../lib/config';
 
-  import ErrnoException = NodeJS.ErrnoException;
+declare const scss = 'scss';
+declare const css = 'css';
 
-  import BuildModes = Helper.BuildModes;
-
-  declare const scss = 'scss';
-  declare const css = 'css';
-
-  /**
-   *
-   *
-   * @export
-   * @class Styles
-   */
-  export class Styles {
+/**
+ *
+ *
+ * @export
+ * @class Styles
+ */
+export class Styles {
     private _gulp: Gulp;
     private buildMode: BuildModes;
-    private styles: Settings;
-    private folders: Folder[];
+    private target: Build;
     private SCSS: Source | null;
     private CSS: Source | null;
-    private ScssGlobs: { folder: Folder, glob: string[] }[];
-    private CssGlobs: { folder: Folder, glob: string[] }[];
+    private mappedFolder: MappedFolder<Source>[];
     private DestPath: string;
-
 
     /**
      *Creates an instance of Styles.
@@ -47,15 +54,9 @@ export module Tasks {
      * @memberof Styles
      */
     constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
-
-      this._gulp = _gulp;
-      this.buildMode = _buildMode;
-      this.styles = _config.Types.Styles;
-
-      this.SCSS = this.styles.Sources.find(value => value.Name.toLowerCase() === scss) ?? null;
-      this.CSS = this.styles.Sources.find(value => value.Name.toLowerCase() === css) ?? null;
-
-      this.init(_config);
+        this._gulp = _gulp;
+        this.buildMode = _buildMode;
+        this.init(_config);
     }
 
     /**
@@ -65,53 +66,59 @@ export module Tasks {
      * @param {Config} _config
      * @memberof Styles
      */
-    private init(_config: Config) {
+    private init(_config: Config): void {
+        this.DestPath = _config.Types.Styles.Destination;
+        this.target =
+            this.buildMode === BuildModes.dev
+                ? _config.Targets.Dev
+                : this.buildMode === BuildModes.release
+                ? _config.Targets.Build
+                : _config.Targets.Ci;
+        this.SCSS = _config.Types.Styles.Sources.find(findSource(scss)) ?? null;
+        this.CSS = _config.Types.Styles.Sources.find(findSource(css)) ?? null;
 
-      this.folders = [];
+        this.createStyleGlobs(_config);
+    }
 
-      this.SCSS = this.styles.Sources.find(value => value.Name.toLowerCase() === scss) ?? null;
-      this.CSS = this.styles.Sources.find(value => value.Name.toLowerCase() === css) ?? null;
+    /**
+     *
+     *
+     * @private
+     * @param {Folder} folder
+     * @memberof Styles
+     */
+    private createStyleGlobs(_config: Config): void {
+        const filterCallback = (folder: Folder): boolean =>
+            this.filterCallback(folder);
+        const folders = _config.Folders.filter(filterCallback);
+        const createMappedFolder = (folder: Folder): MappedFolder<Source> =>
+            this.createMappedFolder(folder);
+        this.mappedFolder = folders.map(createMappedFolder);
+    }
 
+    private filterCallback(folder: Folder): boolean {
+        return folder.Types.includes(scss) || folder.Types.includes(css);
+    }
 
-      for (const folder of _config.Folders) {
-        if(this.filterFolders(folder)) {
-
-          this.folders.push(folder);
-          this.createStyleGlobs(folder);
+    private createMappedFolder(folder: Folder): MappedFolder<Source> {
+        let retValue: MappedFolder<Source>;
+        const tempKeyedGlobArray: Promise<KeyedGlob<Source>>[] = [];
+        if (this.SCSS) {
+            tempKeyedGlobArray.push(
+                createKeyedGlob(this.SCSS, creatGlob(this.SCSS, folder))
+            );
         }
+        if (this.CSS) {
+            tempKeyedGlobArray.push(
+                createKeyedGlob(this.CSS, creatGlob(this.CSS, folder))
+            );
+        }
+        Promise.all(tempKeyedGlobArray).then(
+            (value) => (retValue = { Key: folder, Value: value })
+        );
 
-      }
+        return retValue;
     }
-
-    /**
-     *
-     *
-     * @private
-     * @param {Folder} folder
-     * @returns {boolean}
-     * @memberof Styles
-     */
-    private filterFolders(folder: Folder): boolean {
-      return ((folder.Types.indexOf(scss) !== -1) || (folder.Types.indexOf(css) !== -1));
-    }
-
-    /**
-     *
-     *
-     * @private
-     * @param {Folder} folder
-     * @memberof Styles
-     */
-    private createStyleGlobs(folder: Folder): void {
-      if (this.SCSS) {
-        creatGlob(this.SCSS, folder).then((glob) => this.ScssGlobs.push({ folder, glob }));
-      }
-      if (this.CSS) {
-        creatGlob(this.CSS, folder).then((glob) => this.CssGlobs.push({ folder, glob }));
-      }
-    }
-
-
     /**
      *
      *
@@ -121,9 +128,8 @@ export module Tasks {
      * @memberof Styles
      */
     public static isNeeded(config: Config): boolean {
-      return config?.Types?.Styles?.Sources?.length > 0 ?? false;
+        return config?.Types?.Styles?.Sources?.length > 0 ?? false;
     }
-
 
     /**
      *
@@ -132,44 +138,65 @@ export module Tasks {
      * @returns {TaskFunction}
      * @memberof Styles
      */
-    public BuildScssAll(watch: boolean = false): TaskFunction {
-
-      return this._gulp.parallel(
-        this.folders.map((folder)=>this.BuildScss(folder,true),this));
+    public BuildScssAll(watch = false): TaskFunction {
+        return this._gulp.parallel(
+            this.mappedFolder.map((folder) => this.BuildCss(folder, watch))
+        );
     }
 
-    /**
-     *
-     *
-     * @private
-     * @param {Folder} folder
-     * @param {boolean} [watch=false]
-     * @returns {TaskFunction}
-     * @memberof Styles
-     */
-    private BuildScss(folder: Folder, watch: boolean = false): TaskFunction {
+    private BuildCss(
+        folder: MappedFolder<Source>,
+        watch = false
+    ): TaskFunction {
+        const CssGlob = getGlobFromKeyValuePair(folder, this.CSS);
 
-      const ScssGlob = this.ScssGlobs.find((value) => value.folder === folder).glob;
-      const CssGlob = this.CssGlobs.find((value) => value.folder === folder).glob;
+        return myTaskFunktion<void>(
+            new Promise<void>((resolve, reject) => {
+                pipeline(
+                    [
+                        this.BuildScss(folder, watch),
+                        this.getCssGulpSrc(CssGlob, watch),
+                        autoPrefixer(),
+                        rename({ suffix: '.min' }),
+                        cleanCss(),
+                        this.Destination(folder.Key.Dest),
+                    ],
+                    (errnoException: ErrnoException) => {
+                        reject(new Error(errnoException.message));
+                    }
+                );
+                resolve();
+            })
+        );
+    }
 
-      return myTaskFunktion<void>(
-        new Promise<void>((resolve, reject) => {
-          pipeline(
-            [
-              watch ? this.getScssGulpSrcIncremental(ScssGlob) : this.getScssGulpSrc(ScssGlob),
-              sass.sync({ style: 'compressed' }),
-              watch ? this.getCssGulpSrcIncremental(CssGlob) : this.getCssGulpSrc(CssGlob),
-              autoPrefixer(),
-              rename({ suffix: '.min' }),
-              cleanCss(),
-              this._gulp.dest(this.DestPath, this.buildMode === BuildModes.dev ? { sourcemaps: true } : null)
-            ],
-            (errnoException: ErrnoException) => {
-              reject(new Error(errnoException.message));
-            }
-          );
-          resolve();
-        }));
+    private Destination(
+        folderDest: string
+    ): NodeJS.ReadableStream | NodeJS.ReadWriteStream | NodeJS.WritableStream {
+        const destination = getDestination(
+            this.target.Path,
+            folderDest,
+            this.DestPath
+        );
+        return this._gulp.dest(
+            destination,
+            this.buildMode === BuildModes.dev ? { sourcemaps: true } : null
+        );
+    }
+
+    private BuildScss(
+        folder: MappedFolder<Source>,
+        watch = false
+    ): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
+        const ScssGlob = getGlobFromKeyValuePair(folder, this.SCSS);
+
+        return this.SCSS
+            ? pipeline([
+                  this.getScssGulpSrc(ScssGlob, watch),
+                  watch ? dependents() : through2(),
+                  sass.sync({ style: 'compressed' }),
+              ])
+            : through2();
     }
 
     /**
@@ -180,10 +207,13 @@ export module Tasks {
      * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
      * @memberof Styles
      */
-    private getScssGulpSrc(ScssGlob: string[]): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
-      return this.SCSS ?
-        this._gulp.src(ScssGlob, this.buildMode === BuildModes.dev ? { sourcemaps: true } : null) :
-        through2.obj();
+    private getScssGulpSrc(
+        ScssGlob: string[],
+        watch: boolean
+    ): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
+        return this.SCSS
+            ? this._gulp.src(ScssGlob, this.getOptions(watch))
+            : through2.obj();
     }
 
     /**
@@ -194,41 +224,25 @@ export module Tasks {
      * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
      * @memberof Styles
      */
-    private getCssGulpSrc(CssGlob: string[]): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
-      return this.SCSS ?
-        this._gulp.src(CssGlob, this.buildMode === BuildModes.dev ? { sourcemaps: true } : null) :
-        through2.obj();
+    private getCssGulpSrc(
+        CssGlob: string[],
+        watch: boolean
+    ): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
+        return this.CSS
+            ? this._gulp.src(CssGlob, this.getOptions(watch))
+            : through2.obj();
     }
 
-    /**
-     *
-     *
-     * @private
-     * @param {string[]} ScssGlob
-     * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
-     * @memberof Styles
-     */
-    private getScssGulpSrcIncremental(ScssGlob: string[]): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
-      return this.SCSS ?
-        this._gulp.src(ScssGlob, this.buildMode === BuildModes.dev ? { sourcemaps: true, since: this._gulp.lastRun(this.BuildScssAll(true)) } : null) :
-        through2.obj();
+    private getOptions(watch: boolean) {
+        return watch
+            ? {
+                  sourcemaps: this.buildMode === BuildModes.dev,
+                  since: this._gulp.lastRun(this.BuildScssAll(true)),
+              }
+            : {
+                  sourcemaps: this.buildMode === BuildModes.dev,
+              };
     }
-
-    /**
-     *
-     *
-     * @private
-     * @param {string[]} CssGlob
-     * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
-     * @memberof Styles
-     */
-    private getCssGulpSrcIncremental(CssGlob: string[]): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
-      return this.SCSS ?
-        this._gulp.src(CssGlob, this.buildMode === BuildModes.dev ? { sourcemaps: true, since: this._gulp.lastRun(this.BuildScssAll(true)) } : null) :
-        through2.obj();
-    }
-
-
 
     /**
      *
@@ -236,17 +250,15 @@ export module Tasks {
      * @returns
      * @memberof Styles
      */
-    public watch() {
-
-      const toWatch: string[] = [];
-
-      for (const ScssGlob of this.ScssGlobs) {
-        toWatch.push(...ScssGlob.glob);
-      }
-      for (const CssGlob of this.CssGlobs) {
-        toWatch.push(...CssGlob.glob);
-      }
-      return this._gulp.watch(toWatch, this._gulp.parallel(this.BuildScssAll(true)));
+    public watch(): FSWatcher {
+        const toWatch: string[] = [];
+        this.mappedFolder.forEach((folder) => {
+            toWatch.push(...getGlobFromKeyValuePair(folder, this.SCSS));
+            toWatch.push(...getGlobFromKeyValuePair(folder, this.CSS));
+        });
+        return this._gulp.watch(
+            toWatch,
+            this._gulp.parallel(this.BuildScssAll(true))
+        );
     }
-  }
 }

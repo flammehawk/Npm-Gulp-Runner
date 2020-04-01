@@ -1,49 +1,58 @@
 import { Gulp, TaskFunction } from 'gulp';
 import babel from 'gulp-babel';
-//@ts-ignore 7016
-import * as gCoffee from 'gulp-coffee';
+
+// @ts-ignore:rule(7016)
+import gCoffee = require('gulp-coffee');
+
 import rename from 'gulp-rename';
-import * as gts from 'gulp-typescript';
+//import * as gts from 'gulp-typescript';
 import uglify from 'gulp-uglify';
 import { pipeline } from 'stream';
-import { Config, Folder, Helper, myTaskFunktion, Source, Types, Settings } from '../lib';
+import {
+    Config,
+    Folder,
+    myCallBack,
+    BuildModes,
+    creatGlob,
+    myTaskFunktion,
+    Source,
+    Types,
+    createKeyedGlob,
+    KeyedGlob,
+    MappedFolder,
+    getGlobFromKeyValuePair,
+    getDestination,
+    findSource,
+    Build,
+} from '../lib';
 
 import through2 = require('through2');
 
+import ErrnoException = NodeJS.ErrnoException;
 
+import { FSWatcher } from 'fs';
 
-import path = require('path');
+declare const js = 'js';
+declare const coffee = 'coffee';
+declare const ts = 'ts';
 
-export module Tasks {
-
-  import ErrnoException = NodeJS.ErrnoException;
-  import myCallBack = Helper.myCallBack;
-  import BuildModes = Helper.BuildModes;
-  import creatGlob = Helper.creatGlob;
-
-  declare const js = 'js';
-  declare const coffee = 'coffee';
-  declare const ts = 'ts';
-
-  /**
-   *
-   *
-   * @export
-   * @class Scripts
-   */
-  export class Scripts {
-
+/**
+ *
+ *
+ * @export
+ * @class Scripts
+ */
+export class Scripts {
     private _gulp: Gulp;
-    private settings: Settings;
+
     private buildMode: BuildModes;
     private JS: Source | null;
     private Coffee: Source | null;
     private TS: Source | null;
-    private JsGlob: { folder: Folder, glob: string[] }[];
-    private CoffeeGlob: { folder: Folder, glob: string[] }[];
-    private TsGlob: { folder: Folder, glob: string[] }[];
 
-    private folders: Folder[];
+    private mappedFolder: MappedFolder<Source>[];
+    private target: Build;
+    private destPath: string;
 
     /**
      *Creates an instance of Scripts.
@@ -53,12 +62,10 @@ export module Tasks {
      * @memberof Scripts
      */
     constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
+        this._gulp = _gulp;
+        this.buildMode = _buildMode;
 
-      this._gulp = _gulp;
-      this.buildMode = _buildMode;
-
-      this.init(_config);
-
+        this.init(_config);
     }
 
     /**
@@ -68,33 +75,68 @@ export module Tasks {
      * @param {Config} _config
      * @memberof Scripts
      */
-    private init(_config: Config) {
+    private init(_config: Config): void {
+        this.destPath = _config.Types.Scripts.Destination;
+        this.target =
+            this.buildMode === BuildModes.dev
+                ? _config.Targets.Dev
+                : this.buildMode === BuildModes.release
+                ? _config.Targets.Build
+                : _config.Targets.Ci;
+        this.JS = _config?.Types?.Scripts?.Sources.find(findSource(js)) ?? null;
+        this.Coffee =
+            _config?.Types?.Scripts?.Sources.find(findSource(coffee)) ?? null;
+        this.TS = _config?.Types?.Scripts?.Sources.find(findSource(ts)) ?? null;
 
-      this.folders = [];
-      this.settings = _config.Types.Scripts;
-      this.JS = _config?.Types?.Scripts?.Sources.find(type => type.Name.toLowerCase() === js) ?? null;
-      this.Coffee = _config?.Types?.Scripts?.Sources.find(type => type.Name.toLowerCase() === coffee) ?? null;
-      this.TS = _config?.Types?.Scripts?.Sources.find(type => type.Name.toLowerCase() === ts) ?? null;
-
-      for (const folder of _config.Folders) {
-        if ((folder.Types.indexOf(ts) !== -1)
-          || (folder.Types.indexOf(js) !== -1)
-          || (folder.Types.indexOf(coffee) !== -1)) {
-          this.folders.push(folder);
-
-          if (this.JS) {
-            creatGlob(this.JS, folder).then((glob) => this.JsGlob.push({ folder, glob }));
-          }
-          if (this.TS) {
-            creatGlob(this.TS, folder).then((glob) => this.TsGlob.push({ folder, glob }));
-          }
-          if (this.Coffee) {
-            creatGlob(this.Coffee, folder).then((glob) => this.CoffeeGlob.push({ folder, glob }));
-          }
-        }
-      }
+        const folderFilter = (folder: Folder): boolean =>
+            this.folderFilter(folder);
+        const mapFolder = (folder: Folder): MappedFolder<Source> =>
+            this.mapFolder(folder);
+        this.mappedFolder = _config.Folders.filter(folderFilter).map(mapFolder);
     }
 
+    private folderFilter(folder: Folder): boolean {
+        return (
+            folder.Types.includes(ts) ||
+            folder.Types.includes(js) ||
+            folder.Types.includes(coffee)
+        );
+    }
+
+    private mapFolder(folder: Folder): MappedFolder<Source> {
+        const tempKeyedGlobArray: Promise<KeyedGlob<Source>>[] = [];
+
+        if (this.JS) {
+            tempKeyedGlobArray.push(
+                createKeyedGlob(this.JS, creatGlob(this.JS, folder))
+            );
+        }
+
+        if (this.TS) {
+            tempKeyedGlobArray.push(
+                createKeyedGlob(this.TS, creatGlob(this.TS, folder))
+            );
+        }
+
+        if (this.Coffee) {
+            tempKeyedGlobArray.push(
+                createKeyedGlob(this.Coffee, creatGlob(this.Coffee, folder))
+            );
+        }
+
+        return this.resolveTempKeyedGlobArray(tempKeyedGlobArray, folder);
+    }
+
+    private resolveTempKeyedGlobArray(
+        tempKeyedGlobArray: Promise<KeyedGlob<Source>>[],
+        folder: Folder
+    ): MappedFolder<Source> {
+        let retValue: MappedFolder<Source>;
+        Promise.all(tempKeyedGlobArray).then(
+            (value) => (retValue = { Key: folder, Value: value })
+        );
+        return retValue;
+    }
 
     /**
      *
@@ -105,9 +147,8 @@ export module Tasks {
      * @memberof Scripts
      */
     public static isNeeded(types: Types): boolean {
-      return types?.Scripts?.Sources?.length > 0 ?? false;
+        return types?.Scripts?.Sources?.length > 0 ?? false;
     }
-
 
     /**
      *
@@ -115,11 +156,8 @@ export module Tasks {
      * @returns {TaskFunction[]}
      * @memberof Scripts
      */
-    public BuildJsAll(): TaskFunction[] {
-      let tasks: TaskFunction[];
-      tasks = this.folders.map(this.BuildJS);
-      return tasks;
-
+    public BuildJsAll(watch = false): TaskFunction[] {
+        return this.mappedFolder.map((folder) => this.BuildJS(folder, watch));
     }
 
     /**
@@ -130,29 +168,46 @@ export module Tasks {
      * @returns {TaskFunction}
      * @memberof Scripts
      */
-    private BuildJS(folder: Folder): TaskFunction {
-
-      return myTaskFunktion<void>(
-        new Promise<void>(
-          (resolve, reject) => {
-            pipeline(
-              [
-                this.buildTS(this.TS, folder),
-                this.buildCoffee(this.Coffee, folder),
-                this.getJsGulpSrc(folder),
-                babel({
-                  presets: ['@babel/env'],
-                  compact: true
-                }),
-                rename({ suffix: '.min' }),
-                uglify(),
-                this._gulp.dest(path.posix.join(folder.Dest + this.settings.Destination ?? 'js'), this.buildMode === BuildModes.dev ? { sourcemaps: true } : null)
-              ],
-              (errnoException: ErrnoException) => reject(new Error(errnoException.message))
-            );
-            resolve();
-          }));
-
+    private BuildJS(
+        folder: MappedFolder<Source>,
+        watch: boolean
+    ): TaskFunction {
+        return myTaskFunktion<void>(
+            new Promise<void>((resolve, reject) => {
+                const babelOptions = {
+                    presets: ['@babel/env'],
+                    compact: true,
+                };
+                const renameOptions = { suffix: '.min' };
+                pipeline(
+                    [
+                        //this.buildTS(this.TS, folder, watch),
+                        this.buildCoffee(this.Coffee, folder),
+                        this.getJsGulpSrc(folder, watch),
+                        babel(babelOptions),
+                        rename(renameOptions),
+                        uglify(),
+                        this.Destination(folder.Key.Dest),
+                    ],
+                    (errnoException: ErrnoException) =>
+                        reject(new Error(errnoException.message))
+                );
+                resolve();
+            })
+        );
+    }
+    private Destination(
+        folderDest: string
+    ): NodeJS.ReadableStream | NodeJS.ReadWriteStream | NodeJS.WritableStream {
+        const destination = getDestination(
+            this.target.Path,
+            folderDest,
+            this.destPath
+        );
+        return this._gulp.dest(
+            destination,
+            this.buildMode === BuildModes.dev ? { sourcemaps: true } : null
+        );
     }
 
     /**
@@ -163,14 +218,28 @@ export module Tasks {
      * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
      * @memberof Scripts
      */
-    private getJsGulpSrc(folder: Folder): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
-      if (this.JS) {
-        return this._gulp.src(this.JsGlob.find(
-          (value: { folder: Folder; }) :boolean => value.folder === folder).glob,
-          this.buildMode === BuildModes.dev ? { sourcemaps: true } : null);
-      }
-      return through2.obj();
+    private getJsGulpSrc(
+        folder: MappedFolder<Source>,
+        watch: boolean
+    ): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
+        if (this.JS) {
+            const glob = getGlobFromKeyValuePair(folder, this.JS);
+            return this._gulp.src(glob, this.getOptions(watch));
+        }
+        return through2.obj();
+    }
 
+    private getOptions(
+        watch: boolean
+    ): { sourcemaps: boolean; since?: number } {
+        return watch
+            ? {
+                  sourcemaps: this.buildMode === BuildModes.dev,
+                  since: this._gulp.lastRun(
+                      this._gulp.parallel(this.BuildJsAll(true))
+                  ),
+              }
+            : { sourcemaps: this.buildMode === BuildModes.dev };
     }
 
     /**
@@ -182,22 +251,21 @@ export module Tasks {
      * @returns {NodeJS.WritableStream}
      * @memberof Scripts
      */
-    private buildTS(TS: Source, folder: Folder): NodeJS.WritableStream {
+    // private buildTS(TS: Source, folder: MappedFolder<Source>): NodeJS.WritableStream {
+    //     if (TS) {
+    //         let tsProject: gts.Project | null;
+    //         tsProject = gts.createProject(
+    //             //TODO:  Maybe load tsconfig from cwd to have sourcemaps.
+    //             folder.Src + TS.Src.toString() ?? 'tsconfig.json'
+    //         );
 
-      if (TS) {
-
-        let tsProject: gts.Project | null;
-        tsProject = gts.createProject(//TODO:  Maybe load tsconfig from cwd to have sourcemaps.
-          folder.Src + TS.Src.toString() ?? 'tsconfig.json'
-        );
-
-        return pipeline(
-          [tsProject.src(), tsProject().js],
-          (errnoException: ErrnoException) => myCallBack(errnoException)
-        );
-      }
-      return through2.obj();
-    }
+    //         return pipeline(
+    //             [tsProject.src(), tsProject().js],
+    //             (errnoException: ErrnoException) => myCallBack(errnoException)
+    //         );
+    //     }
+    //     return through2.obj();
+    // }
 
     /**
      *
@@ -208,23 +276,25 @@ export module Tasks {
      * @returns {NodeJS.WritableStream}
      * @memberof Scripts
      */
-    private buildCoffee(Coffee: Source, folder: Folder): NodeJS.WritableStream {
-      if (Coffee) {
-        return pipeline(
-          [
-            this._gulp.src(
-              this.CoffeeGlob.find((value: { folder: Folder; }) => value.folder === folder).glob,
-              this.buildMode === BuildModes.dev ? { sourcemaps: true } : null
-            ),
-            gCoffee()//TODO: Find a way to load the compiler options for Coffee
-          ],
-          (errnoException: ErrnoException) => myCallBack(errnoException)
-        );
-      }
+    private buildCoffee(
+        Coffee: Source,
+        folder: MappedFolder<Source>
+    ): NodeJS.WritableStream {
+        if (Coffee) {
+            const glob = getGlobFromKeyValuePair(folder, this.JS);
+            return pipeline(
+                [
+                    this._gulp.src(glob, {
+                        sourcemaps: this.buildMode === BuildModes.dev,
+                    }),
+                    gCoffee(), //TODO: Find a way to load the compiler options for Coffee
+                ],
+                (errnoException: ErrnoException) => myCallBack(errnoException)
+            );
+        }
 
-      return through2.obj();
+        return through2.obj();
     }
-
 
     /**
      *
@@ -232,27 +302,16 @@ export module Tasks {
      * @returns
      * @memberof Scripts
      */
-    public watch() {
+    public watch(): FSWatcher {
+        const toWatch: string[] = [];
+        this.mappedFolder.forEach((folder) => {
+            toWatch.push(...getGlobFromKeyValuePair(folder, this.JS));
+            toWatch.push(...getGlobFromKeyValuePair(folder, this.TS));
+            toWatch.push(...getGlobFromKeyValuePair(folder, this.Coffee));
+        });
 
-      const toWatch: string[] = [];
+        const BuildJsAll = (): TaskFunction[] => this.BuildJsAll(true);
 
-      for (const glob of this.JsGlob) {
-
-        toWatch.push(...glob.glob);
-
-      }
-      for (const glob of this.TsGlob) {
-
-        toWatch.push(...glob.glob);
-
-      }
-      for (const glob of this.CoffeeGlob) {
-
-        toWatch.push(...glob.glob);
-
-      }
-
-      return this._gulp.watch(toWatch, this.BuildJsAll);
+        return this._gulp.watch(toWatch, BuildJsAll);
     }
-  }
 }

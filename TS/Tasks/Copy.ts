@@ -1,170 +1,190 @@
-import { Helper, Folder, Types, Static, Config, BuildModes, creatGlob, myTaskFunktion } from '../lib';
-import { TaskFunction, Globs, Gulp } from 'gulp';
+import {
+    Folder,
+    Static,
+    Config,
+    BuildModes,
+    myTaskFunktion,
+    KeyedGlob,
+    KeyValuePair,
+    createKeyedGlob,
+    creatGlob,
+} from '../lib';
+import { TaskFunction, Gulp } from 'gulp';
 import { pipeline } from 'stream';
-import { isArray } from 'util';
+import ErrnoException = NodeJS.ErrnoException;
+import path from 'path';
+import { FSWatcher } from 'fs';
+import { getGlob } from '../lib/helpers/GlobHandler';
 
-export module Task {
+/**
+ *
+ *
+ * @export
+ * @class Copy
+ */
+export class Copy {
+    private _gulp: Gulp;
 
-    import ErrnoException = NodeJS.ErrnoException;
+    private buildMode: BuildModes;
+    private folders: Folder[];
+    private statics: Static[];
+    private readonly copyGlob: KeyValuePair<Folder, KeyedGlob<Static>[]>[];
+
+    /**
+     *Creates an instance of Copy.
+     * @param {Gulp} _gulp
+     * @param {Config} _config
+     * @param {BuildModes} _buildMode
+     * @memberof Copy
+     */
+    constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
+        this.buildMode = _buildMode;
+        this._gulp = _gulp;
+        const folders = _config.Folders.filter((value) =>
+            value.Types.includes('static')
+        );
+        const statics = _config.Types.Static;
+        this.copyGlob = this.initCopyGlob(folders, statics);
+    }
 
     /**
      *
      *
-     * @export
-     * @class Copy
+     * @private
+     * @memberof Copy
      */
-    export class Copy {
-        private _gulp: Gulp;
-        private config: Config;
-        private buildMode: BuildModes;
-        private folders: Folder[];
-        private types: Types;
-        private copyGlob: { static: Static, glob: string[] }[];
+    private initCopyGlob(
+        folders: Folder[],
+        statics: Static[]
+    ): KeyValuePair<Folder, KeyedGlob<Static>[]>[] {
+        const folderMapCallback = (
+            statics: Static[]
+        ): ((value: Folder) => KeyValuePair<Folder, KeyedGlob<Static>[]>) =>
+            this.folderMapCallback(statics);
 
-        /**
-         *Creates an instance of Copy.
-         * @param {Gulp} _gulp
-         * @param {Config} _config
-         * @param {BuildModes} _buildMode
-         * @memberof Copy
-         */
-        constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
-            this.config = _config;
-            this.buildMode = _buildMode;
-            this.copyGlob = [];
-            this._gulp = _gulp;
-            this.folders = _config.Folders;
-            this.types = _config.Types;
-            this.initCopyGlob();
+        return folders.map(folderMapCallback(statics));
+    }
 
-        }
+    /**
+     *
+     *
+     * @private
+     * @param {Folder} folder
+     * @memberof Copy
+     */
+    private folderMapCallback(
+        statics: Static[]
+    ): (value: Folder) => KeyValuePair<Folder, KeyedGlob<Static>[]> {
+        const staticMapCallback = (
+            folder: Folder
+        ): ((value: Static) => Promise<KeyedGlob<Static>>) =>
+            this.staticMapCallback(folder);
+        return (folder: Folder): KeyValuePair<Folder, KeyedGlob<Static>[]> => {
+            let retValue: KeyValuePair<Folder, KeyedGlob<Static>[]>;
+            Promise.all(statics.map(staticMapCallback(folder))).then(
+                (value) => (retValue = { Key: folder, Value: value })
+            );
+            return retValue;
+        };
+    }
 
-        /**
-         *
-         *
-         * @private
-         * @memberof Copy
-         */
-        private initCopyGlob() {
-            this.folders.map(this.folderMapCallback,this);
-        }
+    /**
+     *
+     *
+     * @private
+     * @param {Folder} folder
+     * @returns {(value: Static, index: number, array: Static[]) => void}
+     * @memberof Copy
+     */
+    private staticMapCallback(
+        folder: Folder
+    ): (value: Static) => Promise<KeyedGlob<Static>> {
+        return (value: Static): Promise<KeyedGlob<Static>> =>
+            createKeyedGlob(value, creatGlob(value, folder));
+    }
 
+    /**
+     *
+     *
+     * @memberof Copy
+     */
+    public watch(): FSWatcher {
+        return this._gulp.watch(this.getPathes(), this.copy(true));
+    }
 
-        /**
-         *
-         *
-         * @private
-         * @param {Folder} folder
-         * @memberof Copy
-         */
-        private folderMapCallback(folder: Folder) {
-            if (folder.Types.indexOf('Static') !== -1) {
-                this.types.Static.map(this.staticMapCallback(folder),this);
-            }
-        }
+    /**
+     *
+     *
+     * @param {boolean} [watch=false]
+     * @returns {TaskFunction}
+     * @memberof Copy
+     */
+    public copy(watch = false): TaskFunction {
+        return this._gulp.parallel(
+            ...this.copyGlob.map(this.mapStaticTasks(watch))
+        );
+    }
 
-        /**
-         *
-         *
-         * @private
-         * @param {Folder} folder
-         * @returns {(value: Static, index: number, array: Static[]) => void}
-         * @memberof Copy
-         */
-        private staticMapCallback(folder: Folder): (value: Static, index: number, array: Static[]) => void {
-            return (source: Static) => {
-                if (isArray(source.Src)) {
-                    source.Src.map((src) => creatGlob({ Name: source.Name, Src: src, Exclude: source.Exclude }, folder)
-                        .then((glob: string[]) => this.copyGlob.push({ static: source, glob: glob })));
-                }
-                else {
-                    creatGlob({ Name: source.Name, Src: source.Src, Exclude: source.Exclude }, folder)
-                        .then((glob: string[]) => this.copyGlob.push({ static: source, glob: glob }));
-                }
-            };
-        }
+    /**
+     *
+     *
+     * @private
+     * @param {boolean} watch
+     * @param {string} index
+     * @returns {(keyValuePair: KeyValuePair<Folder, KeyedGlob<Static>[]>)=> TaskFunction[]}
+     * @memberof Copy
+     */
+    private mapStaticTasks(
+        watch: boolean
+    ): (
+        keyValuePair: KeyValuePair<Folder, KeyedGlob<Static>[]>
+    ) => TaskFunction {
+        return (
+            keyValuePair: KeyValuePair<Folder, KeyedGlob<Static>[]>
+        ): TaskFunction => {
+            const retValue = keyValuePair.Value.map((value) => {
+                const glob: string[] = [];
+                glob.push(...getGlob(value.Glob));
+                return myTaskFunktion<void>(
+                    new Promise<void>((resolve, reject) => {
+                        pipeline(
+                            this._gulp.src(
+                                glob,
+                                watch
+                                    ? {
+                                          since: this._gulp.lastRun(
+                                              this.copy(true)
+                                          ),
+                                      }
+                                    : null
+                            ),
+                            this._gulp.dest(
+                                path.posix.join(
+                                    keyValuePair.Key.Dest,
+                                    value.Key.Dest
+                                )
+                            ),
+                            (errnoException: ErrnoException) => {
+                                return reject(
+                                    new Error(errnoException.message)
+                                );
+                            }
+                        );
+                        resolve();
+                    })
+                );
+            });
+            return this._gulp.parallel(...retValue);
+        };
+    }
 
-
-        /**
-         *
-         *
-         * @memberof Copy
-         */
-        public watch() {
-            const toWatch: string[] = [];
-            for (const index in this.copyGlob) {
-                if (this.copyGlob.hasOwnProperty(index)) {
-                    toWatch.push(...this.copyGlob[index].glob);
-                }
-            }
-            this._gulp.watch(toWatch, this.copy(true));
-        }
-
-        /**
-         *
-         *
-         * @private
-         * @param {Static} _static
-         * @returns
-         * @memberof Copy
-         */
-        private getCleanSrc(_static: Static) {
-            return this._gulp.src(this.copyGlob.find((value) => value.static === _static).glob);
-        }
-
-        /**
-         *
-         *
-         * @private
-         * @param {Static} _static
-         * @returns
-         * @memberof Copy
-         */
-        private getCleanIncrementalSrc(_static: Static) {
-            return this._gulp.src(this.copyGlob.find((value) => value.static === _static).glob, { since: this._gulp.lastRun(this.copy(true)) });
-        }
-
-        /**
-         *
-         *
-         * @param {boolean} [watch=false]
-         * @returns {TaskFunction}
-         * @memberof Copy
-         */
-        public copy(watch: boolean = false): TaskFunction {
-            const tasks: TaskFunction[] = [];
-            for (const index in this.config.Folders) {
-                if (!this.config.Folders.hasOwnProperty(index)) {
-                    continue;
-                }
-                tasks.push(... this.mapStaticTasks(watch, index));
-
-            }
-            return this._gulp.parallel(tasks);
-        }
-
-
-        /**
-         *
-         *
-         * @private
-         * @param {boolean} watch
-         * @param {string} index
-         * @returns {TaskFunction[]}
-         * @memberof Copy
-         */
-        private mapStaticTasks(watch: boolean, index: string):TaskFunction[] {
-            return this.config.Types.Static.map(
-                (_static) => {
-                    return myTaskFunktion<void>(
-                        new Promise<void>((resolve, reject) => {
-                            pipeline([
-                                watch ? this.getCleanSrc(_static) : this.getCleanIncrementalSrc(_static),
-                                this._gulp.dest(this.config.Folders[index].Dest)
-                            ], (errnoException: ErrnoException) => reject(new Error(errnoException.message)));
-                            resolve();
-                        }));
-                });
-        }
+    private getPathes(): string[] {
+        const pathes: string[] = [];
+        this.copyGlob.forEach((value) => {
+            value.Value.forEach((value) => {
+                pathes.push(...getGlob(value.Glob));
+            });
+        });
+        return pathes;
     }
 }

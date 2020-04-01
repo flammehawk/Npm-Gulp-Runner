@@ -1,27 +1,26 @@
-import { Config, Helper, myTaskFunktion } from '../lib';
+import { Config, BuildModes, myTaskFunktion, Build } from '../lib';
 import del from 'del';
 
 import { TaskFunction } from 'gulp';
 
-
-export module Task {
-
-
-  import buildModes = Helper.BuildModes;
-  /**
-   *
-   *
-   * @export
-   * @class Clean
-   */
-  export class Clean  {
-    private config: Config;
-    private buildMode: buildModes;
-    constructor(config: Config, buildMode: buildModes) {
-      this.config = config;
-      this.buildMode = buildMode;
+/**
+ *
+ *
+ * @export
+ * @class Clean
+ */
+export class Clean {
+    private buildMode: BuildModes;
+    private target: Build;
+    constructor(config: Config, buildMode: BuildModes) {
+        this.buildMode = buildMode;
+        this.target =
+            this.buildMode === BuildModes.dev
+                ? config.Targets.Dev
+                : this.buildMode === BuildModes.release
+                ? config.Targets.Build
+                : config.Targets.Ci;
     }
-
 
     /**
      *
@@ -30,17 +29,18 @@ export module Task {
      * @memberof Clean
      */
     public clean(): TaskFunction[] {
-      if (this.buildMode !== buildModes.dev) {
-        console.log('clean swallowed since we are dev');
-        return [];
-      }
-      const tasks: TaskFunction[] = [];
-      this.getCleanpaths().then(value => {
-          tasks.push(...value.map(this.cleanAll));
-      });
-      return tasks;
+        if (this.buildMode !== BuildModes.dev) {
+            console.log('clean swallowed since we are dev');
+            return [];
+        }
+        const tasks: TaskFunction[] = [];
+        const BoundCleanAll = (cleanPath: string): TaskFunction =>
+            this.cleanAll(cleanPath);
+        this.getCleanpaths().then((value) => {
+            tasks.push(BoundCleanAll(value));
+        });
+        return tasks;
     }
-
 
     /**
      *
@@ -51,11 +51,14 @@ export module Task {
      * @memberof Clean
      */
     private cleanAll(cleanPath: string): TaskFunction {
-      return myTaskFunktion<never>(
-        new Promise<never>((reject) => {
-          del(cleanPath).then(value => console.log(value), reason => reject(reason));
-        })
-      );
+        return myTaskFunktion<never>(
+            new Promise<never>((reject) => {
+                del(cleanPath).then(
+                    (value) => console.log(value),
+                    (reason) => reject(reason)
+                );
+            })
+        );
     }
 
     /**
@@ -65,22 +68,9 @@ export module Task {
      * @returns {Promise<string[]>}
      * @memberof Clean
      */
-    private getCleanpaths(): Promise<string[]> {
-      return new Promise<string[]>((resolve, reject) => {
-        const cleanPath: string[] = [];
-        switch (this.buildMode) {
-          case buildModes.release:
-            cleanPath.push(this.config.Targets.Build.Path);
-            break;
-          case buildModes.ci:
-            cleanPath.push(this.config.Targets.Ci.Path);
-            break;
-          default:
-            reject('Path Could not be specif');
-            break;
-        }
-        resolve(cleanPath);
-      });
+    private getCleanpaths(): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            resolve(this.target.Path);
+        });
     }
-  }
 }
