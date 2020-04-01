@@ -1,4 +1,4 @@
-export default {
+module.exports = {
     extends: [
         'plugin:@typescript-eslint/recommended',
         'plugin:@typescript-eslint/recommended-requiring-type-checking',
@@ -13,7 +13,7 @@ export default {
         ecmaFeatures: {
             modules: true,
         },
-        tsconfigRootDir: __Dirname,
+        tsconfigRootDir: __dirname,
         project: ['./tsconfig.json'],
     },
     root: true,
