@@ -1,10 +1,51 @@
-import { Helper } from './helpers';
+import {
+    BuildModes,
+    myTaskFunktion,
+    creatGlob,
+    KeyedGlob,
+    KeyValuePair,
+    createKeyedGlob,
+    createKeyedGlobArray,
+    flatten,
+    myCallBack,
+    getGlobFromKeyValuePair,
+    getDestination,
+    findSource,
+    Json,
+} from './helpers';
 import { GulpClient } from './gulp';
-import { Config, Folder, Source, Scripts as Settings, Types, Static, Convert } from './config';
-
-import BuildModes = Helper.BuildModes;
-import creatGlob = Helper.creatGlob;
-import myTaskFunktion = Helper.myTaskFunktion;
-
-
-export { Helper, BuildModes, creatGlob, GulpClient, Config, Settings, Types, Static, Folder, Source, Convert, myTaskFunktion};
+import {
+    Config,
+    Folder,
+    Source,
+    Scripts as Settings,
+    Types,
+    Static,
+    Convert,
+    Build,
+} from './config';
+export type MappedFolder<T> = KeyValuePair<Folder, KeyedGlob<T>[]>;
+export {
+    Json,
+    BuildModes,
+    creatGlob,
+    GulpClient,
+    Config,
+    Settings,
+    Types,
+    Static,
+    Folder,
+    Source,
+    Convert,
+    myTaskFunktion,
+    KeyedGlob,
+    KeyValuePair,
+    createKeyedGlob,
+    createKeyedGlobArray,
+    flatten,
+    myCallBack,
+    getGlobFromKeyValuePair,
+    getDestination,
+    findSource,
+    Build,
+};

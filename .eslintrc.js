@@ -25,5 +25,9 @@ module.exports = {
         quotes: 'off',
         semi: 'off',
         '@typescript-eslint/ban-ts-ignore': 'warn',
+        '@typescript-eslint/no-use-before-define': [
+            'error',
+            { functions: false, classes: true },
+        ],
     },
 };

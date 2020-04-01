@@ -1,5 +1,3 @@
-import * as vfs from 'vinyl-fs';
-import * as Undertaker from 'undertaker';
 import * as GlobWatcher from 'glob-watcher';
 import * as fs from 'fs';
 import Gulp = require('Gulp');
@@ -24,6 +22,9 @@ declare namespace GulpClient {
          * Globs are executed in order, so negations should follow positive globs
          * fs.src(['!b*.js', '*.js']) would not exclude any files, but this would: fs.src(['*.js', '!b*.js'])
          */
-        GlobWatcher(globs: Gulp.Globs, cb?: Gulp.TaskFunction | (() => GlobWatcher.AsyncType)): fs.FSWatcher;
+        GlobWatcher(
+            globs: Gulp.Globs,
+            cb?: Gulp.TaskFunction | (() => GlobWatcher.AsyncType)
+        ): fs.FSWatcher;
     }
 }
