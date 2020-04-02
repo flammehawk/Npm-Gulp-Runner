@@ -24,7 +24,6 @@ type GulpType = typeof Gulp;
 export class GulpRunner {
     private config: Config;
     private _gulp: GulpType;
-    private buildModes: BuildModes;
     private styles: Styles;
     private scripts: Scripts;
     private copy: Copy;
@@ -40,6 +39,7 @@ export class GulpRunner {
     constructor(_gulp: GulpType, _configJson: Json, buildModes: BuildModes) {
         this._gulp = _gulp;
         this.config = Convert.toConfig(_configJson.toString());
+
         if (Styles.isNeeded(this.config)) {
             this.styles = new Styles(this._gulp, this.config, buildModes);
         }
@@ -90,5 +90,11 @@ export class GulpRunner {
             this.Clean(),
             this._gulp.parallel(...parallelTasks, this.Copy())
         );
+    }
+
+    public watch(): void {
+        this.copy.watch();
+        this.styles?.watch();
+        this.scripts?.watch();
     }
 }

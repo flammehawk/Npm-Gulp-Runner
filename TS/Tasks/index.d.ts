@@ -43,9 +43,9 @@ declare namespace Tasks {
 
         /**
          * Watch´s the static files
-         * @returns Never
+         *
          */
-        public watch(): void;
+        public watch(): FSWatcher;
     }
 
     /**
@@ -77,7 +77,7 @@ declare namespace Tasks {
         /**
          * Watch's Styles for changes
          */
-        public watch();
+        public watch(): FSWatcher;
     }
 
     /**
@@ -108,6 +108,6 @@ declare namespace Tasks {
         /**
          * Watch's js
          */
-        public watch();
+        public watch(): FSWatcher;
     }
 }
