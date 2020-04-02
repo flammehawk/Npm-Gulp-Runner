@@ -1,17 +1,14 @@
 import { Config, Helper, BuildModes } from '../lib';
 import { TaskFunction, Gulp } from 'gulp';
 
-
 /**
  *
  */
-declare module Tasks {
-
+declare namespace Tasks {
     /**
      * Clean
      */
     export class Clean {
-
         /**
          * Creates an instance of clean.
          * @param config
@@ -30,7 +27,6 @@ declare module Tasks {
      * Copy
      */
     export class Copy {
-
         /**
          * Creates an instance of copy.
          * @param _gulp
@@ -56,7 +52,6 @@ declare module Tasks {
      *  Css
      */
     export class Styles {
-
         /**
          * Creates an instance of css.
          * @param _gulp
@@ -89,7 +84,6 @@ declare module Tasks {
      * Js
      */
     export class Scripts {
-
         /**
          * Creates an instance of js.
          * @param _gulp

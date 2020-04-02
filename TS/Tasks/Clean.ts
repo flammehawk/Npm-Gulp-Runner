@@ -29,16 +29,16 @@ export class Clean {
      * @memberof Clean
      */
     public clean(): TaskFunction[] {
-        if (this.buildMode !== BuildModes.dev) {
-            console.log('clean swallowed since we are dev');
-            return [];
-        }
-        const tasks: TaskFunction[] = [];
+        let tasks: TaskFunction[] = [];
         const BoundCleanAll = (cleanPath: string): TaskFunction =>
             this.cleanAll(cleanPath);
         this.getCleanpaths().then((value) => {
             tasks.push(BoundCleanAll(value));
         });
+        if (this.buildMode !== BuildModes.dev) {
+            console.log('clean swallowed since we are dev');
+            tasks = [];
+        }
         return tasks;
     }
 
@@ -69,7 +69,7 @@ export class Clean {
      * @memberof Clean
      */
     private getCleanpaths(): Promise<string> {
-        return new Promise<string>((resolve, reject) => {
+        return new Promise<string>((resolve) => {
             resolve(this.target.Path);
         });
     }

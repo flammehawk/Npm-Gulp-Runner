@@ -48,7 +48,7 @@ export function myTaskFunktion<T>(execute: Promise<T>): TaskFunction {
 export type Json = string | null | { [property: string]: Json } | Json[];
 
 export function findSource(sourceName: string): (value: Source) => boolean {
-    return (value) => value.Name.toLowerCase() === sourceName;
+    return (value): boolean => value.Name.toLowerCase() === sourceName;
 }
 
 /**

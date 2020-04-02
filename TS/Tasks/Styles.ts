@@ -1,4 +1,5 @@
 import { Gulp, TaskFunction } from 'gulp';
+//@ts-ignore 7016
 import autoPrefixer from 'gulp-autoprefixer';
 //@ts-ignore 7016
 import cleanCss from 'gulp-clean-css';
@@ -20,13 +21,13 @@ import {
     getDestination,
     MappedFolder,
     findSource,
+    Build,
 } from '../lib';
 
 import through2 = require('through2');
 
 import ErrnoException = NodeJS.ErrnoException;
 import { FSWatcher } from 'fs';
-import { Targets, Build } from '../lib/config';
 
 declare const scss = 'scss';
 declare const css = 'css';
@@ -233,7 +234,9 @@ export class Styles {
             : through2.obj();
     }
 
-    private getOptions(watch: boolean) {
+    private getOptions(
+        watch: boolean
+    ): { sourcemaps: boolean; since?: number } {
         return watch
             ? {
                   sourcemaps: this.buildMode === BuildModes.dev,

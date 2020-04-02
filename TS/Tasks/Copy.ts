@@ -8,13 +8,15 @@ import {
     KeyValuePair,
     createKeyedGlob,
     creatGlob,
+    getGlobFromKeyValuePair,
+    getDestination,
+    Build,
 } from '../lib';
 import { TaskFunction, Gulp } from 'gulp';
 import { pipeline } from 'stream';
 import ErrnoException = NodeJS.ErrnoException;
-import path from 'path';
+
 import { FSWatcher } from 'fs';
-import { getGlob } from '../lib/helpers/GlobHandler';
 
 /**
  *
@@ -26,8 +28,7 @@ export class Copy {
     private _gulp: Gulp;
 
     private buildMode: BuildModes;
-    private folders: Folder[];
-    private statics: Static[];
+    private target: Build;
     private readonly copyGlob: KeyValuePair<Folder, KeyedGlob<Static>[]>[];
 
     /**
@@ -45,6 +46,12 @@ export class Copy {
         );
         const statics = _config.Types.Static;
         this.copyGlob = this.initCopyGlob(folders, statics);
+        this.target =
+            this.buildMode === BuildModes.dev
+                ? _config.Targets.Dev
+                : this.buildMode === BuildModes.release
+                ? _config.Targets.Build
+                : _config.Targets.Ci;
     }
 
     /**
@@ -75,17 +82,24 @@ export class Copy {
     private folderMapCallback(
         statics: Static[]
     ): (value: Folder) => KeyValuePair<Folder, KeyedGlob<Static>[]> {
+        return (folder: Folder): KeyValuePair<Folder, KeyedGlob<Static>[]> => {
+            return this.resolveStaticMap(statics, folder);
+        };
+    }
+
+    private resolveStaticMap(
+        statics: Static[],
+        folder: Folder
+    ): KeyValuePair<Folder, KeyedGlob<Static>[]> {
         const staticMapCallback = (
             folder: Folder
         ): ((value: Static) => Promise<KeyedGlob<Static>>) =>
             this.staticMapCallback(folder);
-        return (folder: Folder): KeyValuePair<Folder, KeyedGlob<Static>[]> => {
-            let retValue: KeyValuePair<Folder, KeyedGlob<Static>[]>;
-            Promise.all(statics.map(staticMapCallback(folder))).then(
-                (value) => (retValue = { Key: folder, Value: value })
-            );
-            return retValue;
-        };
+        let retValue: KeyValuePair<Folder, KeyedGlob<Static>[]>;
+        Promise.all(statics.map(staticMapCallback(folder))).then(
+            (value) => (retValue = { Key: folder, Value: value })
+        );
+        return retValue;
     }
 
     /**
@@ -142,47 +156,63 @@ export class Copy {
         return (
             keyValuePair: KeyValuePair<Folder, KeyedGlob<Static>[]>
         ): TaskFunction => {
-            const retValue = keyValuePair.Value.map((value) => {
-                const glob: string[] = [];
-                glob.push(...getGlob(value.Glob));
+            return this.getTaskfunction(keyValuePair, watch);
+        };
+    }
+    private getTaskfunction(
+        keyValuePair: KeyValuePair<Folder, KeyedGlob<Static>[]>,
+        watch: boolean
+    ): TaskFunction {
+        return this._gulp.parallel(
+            ...keyValuePair.Value.map((value) => {
                 return myTaskFunktion<void>(
                     new Promise<void>((resolve, reject) => {
                         pipeline(
                             this._gulp.src(
-                                glob,
-                                watch
-                                    ? {
-                                          since: this._gulp.lastRun(
-                                              this.copy(true)
-                                          ),
-                                      }
-                                    : null
+                                getGlobFromKeyValuePair(
+                                    keyValuePair,
+                                    value.Key
+                                ),
+                                this.getSrcOptions(watch)
                             ),
                             this._gulp.dest(
-                                path.posix.join(
+                                getDestination(
+                                    this.target.Path,
                                     keyValuePair.Key.Dest,
                                     value.Key.Dest
                                 )
                             ),
-                            (errnoException: ErrnoException) => {
-                                return reject(
-                                    new Error(errnoException.message)
-                                );
-                            }
+                            this.errorCallback(reject)
                         );
                         resolve();
                     })
                 );
-            });
-            return this._gulp.parallel(...retValue);
+            })
+        );
+    }
+    private getSrcOptions(watch: boolean): { since: number } | null {
+        return watch
+            ? {
+                  since: this._gulp.lastRun(this.copy(true)),
+              }
+            : null;
+    }
+
+    private errorCallback(
+        reject: (reason?: Error) => void
+    ): (err: ErrnoException) => void {
+        return (errnoException: ErrnoException): void => {
+            reject(new Error(errnoException.message));
         };
     }
 
     private getPathes(): string[] {
         const pathes: string[] = [];
-        this.copyGlob.forEach((value) => {
-            value.Value.forEach((value) => {
-                pathes.push(...getGlob(value.Glob));
+        this.copyGlob.forEach((keyValuePair) => {
+            keyValuePair.Value.forEach((value) => {
+                pathes.push(
+                    ...getGlobFromKeyValuePair(keyValuePair, value.Key)
+                );
             });
         });
         return pathes;
