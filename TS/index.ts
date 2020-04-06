@@ -1,17 +1,8 @@
 import { Config, Convert, Json, BuildModes } from './lib';
-import { Tasks } from './Tasks';
+import { Copy, Clean, Scripts, Styles } from './Tasks';
 import { TaskFunction } from 'gulp';
 
 import Gulp = require('Gulp');
-
-/**
- * Core module of the Npm Gulp Runner
- */
-
-import Clean = Tasks.Clean;
-import Styles = Tasks.Styles;
-import Scripts = Tasks.Scripts;
-import Copy = Tasks.Copy;
 
 type GulpType = typeof Gulp;
 
