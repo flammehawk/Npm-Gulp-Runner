@@ -158,6 +158,7 @@ export class Styles extends BaseTask<Source> {
     private getScssGulpSrc(ScssGlob: string[], watch: boolean): GulpStream {
         const BuildScssAll = (watch: boolean): TaskFunction[] =>
             this.BuildScssAll(watch);
+
         return this._gulp.src(ScssGlob, this.getOptions(watch, BuildScssAll));
     }
 

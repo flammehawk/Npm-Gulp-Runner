@@ -37,6 +37,10 @@ export class Copy extends BaseTask<Static> {
         super(_gulp, _buildMode);
         super.init(_config);
 
+        this.initMappedFolder(_config);
+    }
+
+    private initMappedFolder(_config: Config): void {
         const boundMapFolder = (folder: Folder): MappedFolder<Static> =>
             mapFolder(folder, this.sources);
         this.mappedFolder = _config.Folders.filter(
