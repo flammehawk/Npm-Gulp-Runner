@@ -4,7 +4,7 @@ import { isArray, isUndefined } from 'util';
 
 export type KeyedGlob<T> = { Key: T; Glob: string[] | Promise<string[]> };
 export type KeyValuePair<T, K> = { Key: T; Value: K };
-
+export type MappedFolder<T> = KeyValuePair<Folder, KeyedGlob<T>[]>;
 /**
  * Creates keyed glob
  * @template T
@@ -20,20 +20,6 @@ export function createKeyedGlob<T>(
         resolve({ Key, Glob })
     );
     return retVal;
-}
-
-/**
- * Creates keyed glob array
- * @template T
- * @param Key
- * @param Glob
- * @returns keyed glob array
- */
-export function createKeyedGlobArray<T>(
-    Key: T,
-    Glob: Promise<string[]>[]
-): Promise<KeyedGlob<T>[]> {
-    return Promise.all(Glob.map((value) => createKeyedGlob<T>(Key, value)));
 }
 
 export function* flatten<T>(arr: T): Generator<string, void, void> {
@@ -101,6 +87,41 @@ function createGlobFromArray(
             )
         )
     ).then((value) => resolve([...flatten(value)]));
+}
+
+export function mapFolder<T extends Source>(
+    folder: Folder,
+    sources: T[]
+): MappedFolder<T> {
+    const boundSourceMap = (source: T): Promise<KeyedGlob<T>> => {
+        return sourceMap(source, folder);
+    };
+
+    const tempKeyedGlobArray: Promise<KeyedGlob<T>>[] = sources
+        .map(boundSourceMap)
+        .filter((value) => value !== null);
+
+    return resolveTempKeyedGlobArray(tempKeyedGlobArray, folder);
+}
+function sourceMap<T extends Source>(
+    source: T,
+    folder: Folder
+): Promise<KeyedGlob<T>> {
+    let retValue: Promise<KeyedGlob<T>> = null;
+    if (source) {
+        retValue = createKeyedGlob(this.JS, creatGlob(this.JS, folder));
+    }
+    return retValue;
+}
+function resolveTempKeyedGlobArray<T extends Source>(
+    tempKeyedGlobArray: Promise<KeyedGlob<T>>[],
+    folder: Folder
+): MappedFolder<T> {
+    let retValue: MappedFolder<T>;
+    Promise.all(tempKeyedGlobArray).then(
+        (value) => (retValue = { Key: folder, Value: value })
+    );
+    return retValue;
 }
 
 function getGlob(Glob: string[] | Promise<string[]> | undefined): string[] {

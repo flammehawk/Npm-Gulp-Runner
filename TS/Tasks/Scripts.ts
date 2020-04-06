@@ -13,17 +13,15 @@ import {
     Folder,
     myCallBack,
     BuildModes,
-    creatGlob,
     myTaskFunktion,
     Source,
     Types,
-    createKeyedGlob,
-    KeyedGlob,
     MappedFolder,
+    mapFolder,
     getGlobFromKeyValuePair,
-    getDestination,
     findSource,
-    Build,
+    folderTypeFilter,
+    GulpStream,
 } from '../lib';
 
 import through2 = require('through2');
@@ -31,10 +29,7 @@ import through2 = require('through2');
 import ErrnoException = NodeJS.ErrnoException;
 
 import { FSWatcher } from 'fs';
-
-declare const js = 'js';
-declare const coffee = 'coffee';
-declare const ts = 'ts';
+import { BaseTask } from './BaseTask';
 
 /**
  *
@@ -42,17 +37,14 @@ declare const ts = 'ts';
  * @export
  * @class Scripts
  */
-export class Scripts {
-    private _gulp: Gulp;
-
-    private buildMode: BuildModes;
-    private JS: Source | null;
-    private Coffee: Source | null;
-    private TS: Source | null;
-
-    private mappedFolder: MappedFolder<Source>[];
-    private target: Build;
-    private destPath: string;
+export class Scripts extends BaseTask<Source> {
+    protected readonly js = 'js';
+    protected readonly coffee = 'coffee';
+    protected readonly ts = 'ts';
+    protected readonly babelOptions = {
+        presets: ['@babel/env'],
+        compact: true,
+    };
 
     /**
      *Creates an instance of Scripts.
@@ -62,8 +54,7 @@ export class Scripts {
      * @memberof Scripts
      */
     constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
-        this._gulp = _gulp;
-        this.buildMode = _buildMode;
+        super(_gulp, _buildMode);
 
         this.init(_config);
     }
@@ -75,67 +66,19 @@ export class Scripts {
      * @param {Config} _config
      * @memberof Scripts
      */
-    private init(_config: Config): void {
+    protected init(_config: Config): void {
         this.destPath = _config.Types.Scripts.Destination;
-        this.target =
-            this.buildMode === BuildModes.dev
-                ? _config.Targets.Dev
-                : this.buildMode === BuildModes.release
-                ? _config.Targets.Build
-                : _config.Targets.Ci;
-        this.JS = _config?.Types?.Scripts?.Sources.find(findSource(js)) ?? null;
-        this.Coffee =
-            _config?.Types?.Scripts?.Sources.find(findSource(coffee)) ?? null;
-        this.TS = _config?.Types?.Scripts?.Sources.find(findSource(ts)) ?? null;
 
-        const folderFilter = (folder: Folder): boolean =>
-            this.folderFilter(folder);
-        const mapFolder = (folder: Folder): MappedFolder<Source> =>
-            this.mapFolder(folder);
-        this.mappedFolder = _config.Folders.filter(folderFilter).map(mapFolder);
-    }
-
-    private folderFilter(folder: Folder): boolean {
-        return (
-            folder.Types.includes(ts) ||
-            folder.Types.includes(js) ||
-            folder.Types.includes(coffee)
+        super.init(_config);
+        super.initSources(
+            [this.ts, this.js, this.coffee],
+            _config.Types.Scripts.Sources
         );
-    }
-
-    private mapFolder(folder: Folder): MappedFolder<Source> {
-        const tempKeyedGlobArray: Promise<KeyedGlob<Source>>[] = [];
-
-        if (this.JS) {
-            tempKeyedGlobArray.push(
-                createKeyedGlob(this.JS, creatGlob(this.JS, folder))
-            );
-        }
-
-        if (this.TS) {
-            tempKeyedGlobArray.push(
-                createKeyedGlob(this.TS, creatGlob(this.TS, folder))
-            );
-        }
-
-        if (this.Coffee) {
-            tempKeyedGlobArray.push(
-                createKeyedGlob(this.Coffee, creatGlob(this.Coffee, folder))
-            );
-        }
-
-        return this.resolveTempKeyedGlobArray(tempKeyedGlobArray, folder);
-    }
-
-    private resolveTempKeyedGlobArray(
-        tempKeyedGlobArray: Promise<KeyedGlob<Source>>[],
-        folder: Folder
-    ): MappedFolder<Source> {
-        let retValue: MappedFolder<Source>;
-        Promise.all(tempKeyedGlobArray).then(
-            (value) => (retValue = { Key: folder, Value: value })
-        );
-        return retValue;
+        const boundMapFolder = (folder: Folder): MappedFolder<Source> =>
+            mapFolder(folder, this.sources);
+        this.mappedFolder = _config.Folders.filter(
+            folderTypeFilter([this.ts, this.js, this.coffee])
+        ).map(boundMapFolder);
     }
 
     /**
@@ -174,39 +117,24 @@ export class Scripts {
     ): TaskFunction {
         return myTaskFunktion<void>(
             new Promise<void>((resolve, reject) => {
-                const babelOptions = {
-                    presets: ['@babel/env'],
-                    compact: true,
-                };
-                const renameOptions = { suffix: '.min' };
                 pipeline(
                     [
                         //this.buildTS(this.TS, folder, watch),
-                        this.buildCoffee(this.Coffee, folder),
+                        this.buildCoffee(
+                            this.sources.find(findSource(this.coffee)),
+                            folder
+                        ),
                         this.getJsGulpSrc(folder, watch),
-                        babel(babelOptions),
-                        rename(renameOptions),
+                        babel(this.babelOptions),
+                        rename(this.renameOptions),
                         uglify(),
-                        this.Destination(folder.Key.Dest),
+                        super.Destination(folder.Key.Dest),
                     ],
                     (errnoException: ErrnoException) =>
                         reject(new Error(errnoException.message))
                 );
                 resolve();
             })
-        );
-    }
-    private Destination(
-        folderDest: string
-    ): NodeJS.ReadableStream | NodeJS.ReadWriteStream | NodeJS.WritableStream {
-        const destination = getDestination(
-            this.target.Path,
-            folderDest,
-            this.destPath
-        );
-        return this._gulp.dest(
-            destination,
-            this.buildMode === BuildModes.dev ? { sourcemaps: true } : null
         );
     }
 
@@ -221,25 +149,16 @@ export class Scripts {
     private getJsGulpSrc(
         folder: MappedFolder<Source>,
         watch: boolean
-    ): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
-        if (this.JS) {
-            const glob = getGlobFromKeyValuePair(folder, this.JS);
-            return this._gulp.src(glob, this.getOptions(watch));
+    ): GulpStream {
+        const js = this.sources.find(findSource(this.js));
+        const BuildJsAll = (watch: boolean): TaskFunction[] =>
+            this.BuildJsAll(watch);
+        let retVal: GulpStream = through2.obj();
+        if (this.sources.includes(js)) {
+            const glob = getGlobFromKeyValuePair(folder, js);
+            retVal = this._gulp.src(glob, this.getOptions(watch, BuildJsAll));
         }
-        return through2.obj();
-    }
-
-    private getOptions(
-        watch: boolean
-    ): { sourcemaps: boolean; since?: number } {
-        return watch
-            ? {
-                  sourcemaps: this.buildMode === BuildModes.dev,
-                  since: this._gulp.lastRun(
-                      this._gulp.parallel(this.BuildJsAll(true))
-                  ),
-              }
-            : { sourcemaps: this.buildMode === BuildModes.dev };
+        return retVal;
     }
 
     /**
@@ -279,10 +198,11 @@ export class Scripts {
     private buildCoffee(
         Coffee: Source,
         folder: MappedFolder<Source>
-    ): NodeJS.WritableStream {
+    ): GulpStream {
+        let retVal: GulpStream = through2.obj();
         if (Coffee) {
-            const glob = getGlobFromKeyValuePair(folder, this.JS);
-            return pipeline(
+            const glob = getGlobFromKeyValuePair(folder, Coffee);
+            retVal = pipeline(
                 [
                     this._gulp.src(glob, {
                         sourcemaps: this.buildMode === BuildModes.dev,
@@ -293,7 +213,7 @@ export class Scripts {
             );
         }
 
-        return through2.obj();
+        return retVal;
     }
 
     /**
@@ -303,15 +223,10 @@ export class Scripts {
      * @memberof Scripts
      */
     public watch(): FSWatcher {
-        const toWatch: string[] = [];
-        this.mappedFolder.forEach((folder) => {
-            toWatch.push(...getGlobFromKeyValuePair(folder, this.JS));
-            toWatch.push(...getGlobFromKeyValuePair(folder, this.TS));
-            toWatch.push(...getGlobFromKeyValuePair(folder, this.Coffee));
-        });
+        const toWatch: string[] = this.getToWatchGlobs();
 
         const BuildJsAll = (): TaskFunction[] => this.BuildJsAll(true);
 
-        return this._gulp.watch(toWatch, BuildJsAll);
+        return this._gulp.watch(toWatch, this._gulp.parallel(BuildJsAll));
     }
 }

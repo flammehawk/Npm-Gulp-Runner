@@ -12,22 +12,21 @@ import {
     Config,
     Folder,
     Source,
-    creatGlob,
     BuildModes,
     myTaskFunktion,
-    KeyedGlob,
-    createKeyedGlob,
     getGlobFromKeyValuePair,
-    getDestination,
     MappedFolder,
     findSource,
-    Build,
+    folderTypeFilter,
+    mapFolder,
+    GulpStream,
 } from '../lib';
 
 import through2 = require('through2');
 
 import ErrnoException = NodeJS.ErrnoException;
 import { FSWatcher } from 'fs';
+import { BaseTask } from './BaseTask';
 
 declare const scss = 'scss';
 declare const css = 'css';
@@ -38,15 +37,7 @@ declare const css = 'css';
  * @export
  * @class Styles
  */
-export class Styles {
-    private _gulp: Gulp;
-    private buildMode: BuildModes;
-    private target: Build;
-    private SCSS: Source | null;
-    private CSS: Source | null;
-    private mappedFolder: MappedFolder<Source>[];
-    private DestPath: string;
-
+export class Styles extends BaseTask<Source> {
     /**
      *Creates an instance of Styles.
      * @param {Gulp} _gulp
@@ -55,8 +46,7 @@ export class Styles {
      * @memberof Styles
      */
     constructor(_gulp: Gulp, _config: Config, _buildMode: BuildModes) {
-        this._gulp = _gulp;
-        this.buildMode = _buildMode;
+        super(_gulp, _buildMode);
         this.init(_config);
     }
 
@@ -67,16 +57,10 @@ export class Styles {
      * @param {Config} _config
      * @memberof Styles
      */
-    private init(_config: Config): void {
-        this.DestPath = _config.Types.Styles.Destination;
-        this.target =
-            this.buildMode === BuildModes.dev
-                ? _config.Targets.Dev
-                : this.buildMode === BuildModes.release
-                ? _config.Targets.Build
-                : _config.Targets.Ci;
-        this.SCSS = _config.Types.Styles.Sources.find(findSource(scss)) ?? null;
-        this.CSS = _config.Types.Styles.Sources.find(findSource(css)) ?? null;
+    protected init(_config: Config): void {
+        this.destPath = _config.Types.Styles.Destination;
+        super.init(_config);
+        super.initSources([scss, css], _config.Types.Styles.Sources);
 
         this.createStyleGlobs(_config);
     }
@@ -89,37 +73,13 @@ export class Styles {
      * @memberof Styles
      */
     private createStyleGlobs(_config: Config): void {
-        const filterCallback = (folder: Folder): boolean =>
-            this.filterCallback(folder);
-        const folders = _config.Folders.filter(filterCallback);
-        const createMappedFolder = (folder: Folder): MappedFolder<Source> =>
-            this.createMappedFolder(folder);
-        this.mappedFolder = folders.map(createMappedFolder);
+        const boundMapFolder = (folder: Folder): MappedFolder<Source> =>
+            mapFolder(folder, this.sources);
+        this.mappedFolder = _config.Folders.filter(
+            folderTypeFilter([scss, css])
+        ).map(boundMapFolder);
     }
 
-    private filterCallback(folder: Folder): boolean {
-        return folder.Types.includes(scss) || folder.Types.includes(css);
-    }
-
-    private createMappedFolder(folder: Folder): MappedFolder<Source> {
-        let retValue: MappedFolder<Source>;
-        const tempKeyedGlobArray: Promise<KeyedGlob<Source>>[] = [];
-        if (this.SCSS) {
-            tempKeyedGlobArray.push(
-                createKeyedGlob(this.SCSS, creatGlob(this.SCSS, folder))
-            );
-        }
-        if (this.CSS) {
-            tempKeyedGlobArray.push(
-                createKeyedGlob(this.CSS, creatGlob(this.CSS, folder))
-            );
-        }
-        Promise.all(tempKeyedGlobArray).then(
-            (value) => (retValue = { Key: folder, Value: value })
-        );
-
-        return retValue;
-    }
     /**
      *
      *
@@ -139,17 +99,18 @@ export class Styles {
      * @returns {TaskFunction}
      * @memberof Styles
      */
-    public BuildScssAll(watch = false): TaskFunction {
-        return this._gulp.parallel(
-            this.mappedFolder.map((folder) => this.BuildCss(folder, watch))
-        );
+    public BuildScssAll(watch = false): TaskFunction[] {
+        return this.mappedFolder.map((folder) => this.BuildCss(folder, watch));
     }
 
     private BuildCss(
         folder: MappedFolder<Source>,
         watch = false
     ): TaskFunction {
-        const CssGlob = getGlobFromKeyValuePair(folder, this.CSS);
+        const CssGlob = getGlobFromKeyValuePair(
+            folder,
+            this.sources.find(findSource(css))
+        );
 
         return myTaskFunktion<void>(
             new Promise<void>((resolve, reject) => {
@@ -158,7 +119,7 @@ export class Styles {
                         this.BuildScss(folder, watch),
                         this.getCssGulpSrc(CssGlob, watch),
                         autoPrefixer(),
-                        rename({ suffix: '.min' }),
+                        rename(this.renameOptions),
                         cleanCss(),
                         this.Destination(folder.Key.Dest),
                     ],
@@ -171,27 +132,13 @@ export class Styles {
         );
     }
 
-    private Destination(
-        folderDest: string
-    ): NodeJS.ReadableStream | NodeJS.ReadWriteStream | NodeJS.WritableStream {
-        const destination = getDestination(
-            this.target.Path,
-            folderDest,
-            this.DestPath
+    private BuildScss(folder: MappedFolder<Source>, watch = false): GulpStream {
+        const ScssGlob = getGlobFromKeyValuePair(
+            folder,
+            this.sources.find(findSource(scss))
         );
-        return this._gulp.dest(
-            destination,
-            this.buildMode === BuildModes.dev ? { sourcemaps: true } : null
-        );
-    }
 
-    private BuildScss(
-        folder: MappedFolder<Source>,
-        watch = false
-    ): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
-        const ScssGlob = getGlobFromKeyValuePair(folder, this.SCSS);
-
-        return this.SCSS
+        return this.sources.find(findSource(scss))
             ? pipeline([
                   this.getScssGulpSrc(ScssGlob, watch),
                   watch ? dependents() : through2(),
@@ -208,13 +155,10 @@ export class Styles {
      * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
      * @memberof Styles
      */
-    private getScssGulpSrc(
-        ScssGlob: string[],
-        watch: boolean
-    ): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
-        return this.SCSS
-            ? this._gulp.src(ScssGlob, this.getOptions(watch))
-            : through2.obj();
+    private getScssGulpSrc(ScssGlob: string[], watch: boolean): GulpStream {
+        const BuildScssAll = (watch: boolean): TaskFunction[] =>
+            this.BuildScssAll(watch);
+        return this._gulp.src(ScssGlob, this.getOptions(watch, BuildScssAll));
     }
 
     /**
@@ -225,26 +169,12 @@ export class Styles {
      * @returns {(NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream)}
      * @memberof Styles
      */
-    private getCssGulpSrc(
-        CssGlob: string[],
-        watch: boolean
-    ): NodeJS.ReadWriteStream | NodeJS.ReadableStream | NodeJS.WritableStream {
-        return this.CSS
-            ? this._gulp.src(CssGlob, this.getOptions(watch))
+    private getCssGulpSrc(CssGlob: string[], watch: boolean): GulpStream {
+        const BuildScssAll = (watch: boolean): TaskFunction[] =>
+            this.BuildScssAll(watch);
+        return this.sources.find(findSource(css))
+            ? this._gulp.src(CssGlob, this.getOptions(watch, BuildScssAll))
             : through2.obj();
-    }
-
-    private getOptions(
-        watch: boolean
-    ): { sourcemaps: boolean; since?: number } {
-        return watch
-            ? {
-                  sourcemaps: this.buildMode === BuildModes.dev,
-                  since: this._gulp.lastRun(this.BuildScssAll(true)),
-              }
-            : {
-                  sourcemaps: this.buildMode === BuildModes.dev,
-              };
     }
 
     /**
@@ -254,11 +184,7 @@ export class Styles {
      * @memberof Styles
      */
     public watch(): FSWatcher {
-        const toWatch: string[] = [];
-        this.mappedFolder.forEach((folder) => {
-            toWatch.push(...getGlobFromKeyValuePair(folder, this.SCSS));
-            toWatch.push(...getGlobFromKeyValuePair(folder, this.CSS));
-        });
+        const toWatch: string[] = this.getToWatchGlobs();
         return this._gulp.watch(
             toWatch,
             this._gulp.parallel(this.BuildScssAll(true))

@@ -5,13 +5,16 @@ import {
     KeyedGlob,
     KeyValuePair,
     createKeyedGlob,
-    createKeyedGlobArray,
     flatten,
     myCallBack,
     getGlobFromKeyValuePair,
     getDestination,
     findSource,
     Json,
+    folderTypeFilter,
+    getTarget,
+    MappedFolder,
+    mapFolder,
 } from './helpers';
 import { GulpClient } from './gulp';
 import {
@@ -24,7 +27,11 @@ import {
     Convert,
     Build,
 } from './config';
-export type MappedFolder<T> = KeyValuePair<Folder, KeyedGlob<T>[]>;
+
+export type GulpStream =
+    | NodeJS.ReadWriteStream
+    | NodeJS.ReadableStream
+    | NodeJS.WritableStream;
 export {
     Json,
     BuildModes,
@@ -41,11 +48,14 @@ export {
     KeyedGlob,
     KeyValuePair,
     createKeyedGlob,
-    createKeyedGlobArray,
     flatten,
     myCallBack,
     getGlobFromKeyValuePair,
     getDestination,
     findSource,
+    folderTypeFilter,
     Build,
+    getTarget,
+    MappedFolder,
+    mapFolder,
 };

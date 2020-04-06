@@ -1,7 +1,8 @@
-import { Config, BuildModes, myTaskFunktion, Build } from '../lib';
+import { Config, BuildModes, myTaskFunktion, Source } from '../lib';
 import del from 'del';
 
 import { TaskFunction } from 'gulp';
+import { BaseTask } from './BaseTask';
 
 /**
  *
@@ -9,17 +10,10 @@ import { TaskFunction } from 'gulp';
  * @export
  * @class Clean
  */
-export class Clean {
-    private buildMode: BuildModes;
-    private target: Build;
+export class Clean extends BaseTask<Source> {
     constructor(config: Config, buildMode: BuildModes) {
-        this.buildMode = buildMode;
-        this.target =
-            this.buildMode === BuildModes.dev
-                ? config.Targets.Dev
-                : this.buildMode === BuildModes.release
-                ? config.Targets.Build
-                : config.Targets.Ci;
+        super(null, buildMode);
+        super.init(config);
     }
 
     /**
